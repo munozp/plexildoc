@@ -1,0 +1,1392 @@
+\chapter{El lenguaje PLEXIL}\label{cap:plexil}
+
+En este capítulo se verán los elementos que conforman el lenguaje de ejecución PLEXIL y la codificación de los mismos, además de como llevar a cabo la traducción de los planes escritos en las diferentes versiones del lenguaje PLEXIL a XML mediante las herramientas desarrolladas a tal efecto. Además se verá la codificación de PlexilScript, con el cual podremos realizar simulaciones de planes mediante la aplicación TestExec que se verá en el capítulo \ref{cap:ue}.
+
+
+\section{Introducción a PLEXIL}
+
+PLEXIL es un lenguaje para el modelado y representación de planes de ejecución de sistemas autónomos. Es válido tanto para sistemas mono-agente como para multi-agente ya sea en entornos reales o simulados. Está diseñado de tal forma que sea compacto, semánticamente sencillo y determinista siempre que se de la misma secuencia de sucesos en el mundo exterior. A pesar de ser un lenguaje sencillo, permite definir bucles, condiciones de salto, actividades basadas en tiempo y eventos, actividades concurrentes o en secuencia y permite restricciones temporales y manejo de recursos. El núcleo de la sintaxis es simple y uniforme, lo que permite una fácil y rápida interpretación de los planes escritos por parte del planificador.
+
+Hay que destacar que PLEXIL, al contrario que otros lenguajes de planificación como, por ejemplo, PDDL\cite{ref:pddl}, tiene una única entrada, es decir, el plan y el problema son un único elemento. Esto es así ya que un plan de PLEXIL consta de una serie de elementos de acción que podrán ser o no ejecutados en función del estado del mundo, la ejecución correcta o no de otras acciones y, a su vez, estas acciones constituyen metas que deben ser alcanzadas. El plan finalizará una vez todas las posibles acciones que se puedan ejecutar, hayan sido ejecutadas (independientemente del resultado de la ejecución). Estos elementos de ejecución son los nodos.
+
+El formato de lenguaje PLEXIL será XML, aunque la codificación de los planes podrá realizarse de dos formas: utilizando el lenguaje PLEXIL estándar (en adelante Plexil) o PlexilLisp. La codificación que se verá en las siguientes secciones corresponde al lenguaje PLEXIL estándar. Con estos planes escritos, mediante un programa creado para ello, se realizará el análisis sintáctico y semántico del mismo y se encargará de realizar la traducción al formato XML. El archivo XML generado será el que utilizará el ejecutor como elemento de entrada.
+
+%SALTO DE PAGINA
+\newpage
+\section{Nodos}
+
+Los nodos son el elemento fundamental del lenguaje PLEXIL. Todo plan escrito en PLEXIL constará de uno o más nodos. Cada nodo a su vez constará de dos elementos:
+\begin{itemize}
+    \item \textbf{Condiciones}: una serie de condiciones que permitirán controlar cuando puede ejecutarse el cuerpo del nodo, que ha de ocurrir para que finalice correctamente o cuando puede volver a ser apto para ejecución por ejemplo. Todas las posibles condiciones se verán en la sección \ref{sec:condiciones}.
+    \item \textbf{Cuerpo}: el cuerpo del nodo determina las acciones que llevará a cabo el nodo. En función de la acción que ejecute el nodo se considerará un tipo u otro de nodo. Por ejemplo, existen nodos de asignación, de comando o de llamada a función. Los tipos de nodos y sus particularidades se verán en la sección \ref{sec:tipos}.
+\end{itemize}
+
+Un plan de PLEXIL será un árbol de nodos que representará una descomposición jerárquica de tareas que debe llevar a cabo el plan. En este sentido, lo normal será distribuir las tareas de tal forma que las de más alto nivel se sitúen cercanas a la raíz del árbol y las de menor nivel se aproximen a las hojas. El número de ramas y la profundidad del árbol la determinaremos a la hora de escribir el plan en función de nuestras necesidades. En la figura \ref{fig:arbol} puede verse gráficamente un plan de ejemplo.
+
+\begin{figure}[h]
+\begin{center}
+ \includegraphics[width=12cm]{planej}
+ \caption{Ejemplo gráfico de un plan escrito en PLEXIL}
+ \label{fig:arbol}
+\end{center}
+\end{figure}
+
+En las siguientes subsecciones veremos como se declara un nodo y los atributos que pueden utilizarse dentro del lenguaje. Tras ello, se analizarán las siete condiciones posibles que se pueden utilizar para controlar la ejecución de los nodos y los seis tipos de nodos disponibles en PLEXIL.
+
+\subsection{Declaración}
+
+Para declarar un nodo en lenguaje Plexil se recurre a la estructura mostrada en la figura \ref{fig:decnodo}. En la declaración, \textit{nombre} representa la identificación unívoca del nodo. Los datos del nodo serán variables, condiciones de ejecución y los datos propios del nodo en función del tipo de nodo que sea (las variables y condiciones son opcionales). El tipo de nodo no es necesario declararlo, ya que será determinado automáticamente en función de los datos que se introduzcan en él.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+nombre:
+{
+   <datos>
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Declaración de un nodo en Plexil}
+\label{fig:decnodo}
+\end{center}
+\end{figure}
+
+Un nodo puede no estar nombrado, en cuyo caso será únicamente un par de corchetes en cuyo interior estará el cuerpo del nodo. Aunque esto es válido, no suele ser práctico ya que no puede referenciarse de ninguna manera al nodo.
+
+
+\section{Variables}
+
+En Plexil se pueden declarar variables locales dentro de un nodo. Existen cuatro tipo de variables: \texttt{Boolean, Integer, Real} y \texttt{String}. Además se podrán declarar vectores para cada tipo simple. Hay que indicar que sólo existen variables, no se pueden declarar constantes como tal.
+
+Los variables se declaran como sigue: \texttt{tipo nombre = valor;} donde la asignación inicial puede omitirse, tomando entonces \texttt{UNKNOWN} como valor la variable declarada. En la figura \ref{fig:vars} pueden verse varios ejemplos de declaración de variables.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+Boolean iniciar = true;
+Integer pasos;
+Real pi = 3.141592;
+String mensaje = "Inicializado";
+\end{lstlisting}
+\end{minipage}
+\caption{Ejemplos de declaración de variables}
+\label{fig:vars}
+\end{center}
+\end{figure}
+
+Como se ha indicado, para cada uno de los cuatro tipos simples, se pueden declarar vectores o arrays unidimensionales. Se declaran de la siguiente forma: \texttt{tipo nombre[dimensión] = \#(val1 val2 ...);}, debiendo siempre especificarse la dimensión del mismo. Para trabajar con los arrays hay que trabajar con cada elemento independientemente referenciado por su posición (\texttt{array[pos]}), no pudiendo trabajar con el array completo. En la figura \ref{fig:arrays} pueden verse ejemplos de declaración de arrays. Los arrays al igual que las variables simples se inicializarán a \texttt{UNKNOWN} en caso de no especificar los valores, salvo que en el caso de los arrays pueden especificarse los primeros n valores, dejando el resto indeterminados. Es importante destacar que los arrays comienzan en la posición 0.
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+Integer temperaturas[100];
+Real predefinido[10] = #(1.3 2.0 3.5);
+Integer X[6] = [1,3,5];
+\end{lstlisting}
+\end{minipage}
+\caption{Ejemplos de declaración de arrays}
+\label{fig:arrays}
+\end{center}
+\end{figure}
+
+
+\subsection{Visibilidad de variables}
+
+Las variables serán visibles localmente por el nodo que las haya declarado en su cuerpo y por todos sus hijos. Este es el comportamiento general y se puede modificar explicitamente mediante el empleo de clausulas de interfaz. Estas clausulas definirán los variables que serán accesibles a los hijos del nodo que las declara y la forma en que estos pueden acceder. Si se ha declarado la interfaz para al menos una variable en el nodo, el resto de variables cuya interfaz no sea declarada se asumirá directamente que son inaccesibles a los hijos. Las dos clausulas de interfaz son las siguientes:
+
+\begin{itemize}
+	\item \texttt{In}: esta clausula permite que los hijos lean las variables. Una variable de lectura no podrá ser redeclarada por un hijo como lectura y escritura.
+	\item \texttt{InOut}: permite la lectura y escritura de la variable por los nodos hijos.
+\end{itemize}
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+Interfaz:
+{
+  In x, y;
+  InOut z;
+  Integer a, b;
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Ejemplo de interfaces}
+\label{fig:interfaz}
+\end{center}
+\end{figure}
+
+En la figura \ref{fig:interfaz} puede verse un ejemplo de un nodo con una serie de variables. En dicho nodo, las variables \textit{x} e \textit{y} serán accesibles a sus descendientes como variables de sólo lectura, mientras que \textit{z} lo será para lectura y escritura. Finalmente, las variables \textit{a} y \textit{b}, al no tener una interfaz declarada, no serán accesibles por los nodos hijos.
+
+
+\subsection{Expresiones}
+
+A la hora de actuar con variables se recurre a las expresiones. La forma de estas expresiones dependerá del tipo de variables sobre el que trabajen, pero una expresión en PLEXIL será esencialmente un valor literal, una variable, una consulta al estado del mundo exterior, el valor de un estado de un nodo, o una combinación de estos elementos. Por tanto, una expresión puede contener expresiones combinadas entre ella mediante el uso de operadores.
+
+Además de aparecer para la asignación de variables, las expresiones podrán aparecer en las condiciones que gestionan la ejecución de los nodos o en la gestión de recursos.
+
+Para el caso de operaciones numéricas, se podrá recurrir a los operadores tradicionales: suma, resta, multiplicación y división, así como a raíces cuadradas\footnote{Si se intenta obtener la raíz de un número negativo (resultado complejo) se producirá un error en la ejecución.} (\texttt{sqrt}) y valor absoluto\footnote{Aunque el valor absoluto está definido, no es así para el negativo, el signo '-' sólo es válido como resta, no se permite como inversor de signo. Para obtener el negativo a partir de un número positivo, se deberá recurrir a la expresión (0-x).} (\texttt{abs}). Será posible en algunos casos mezclar números reales y números enteros siendo el tipo resultante dependiente del contexto\footnote{Estos casos no están documentados, aunque son intuitivos.}. Las reglas de precedencia y asociación de operadores son las reglas estándar, permitiéndose el uso de paréntesis para especificar el orden de operación. En la figura \ref{fig:opnum} se pueden ver ejemplos de expresiones numéricas.
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+resultado = numreal / 14.5;
+x1 = -b + (sqrt(b*b - 4*a*c) / (2*a));
+tempVal = (temperatura[2] - 32) * 5 / 9;
+absoluto = abs(real);
+\end{lstlisting}
+\end{minipage}
+\caption{Ejemplos de expresiones numéricas}
+\label{fig:opnum}
+\end{center}
+\end{figure}
+
+Las expresiones lógicas vendrán determinadas por los operadores de comparación (igualdad: \texttt{==}, desigualdad: \texttt{!=}, mayor que o mayor o igual que: \texttt{>\ o >=} y menor que o menor o igual que: \texttt{<\ o <=}) o los operadores lógicos (negación: \texttt{!}, disyunción u OR: \texttt{$\Vert$}, conjunción o AND: \texttt{\&\&} y disyunción exclusiva o XOR: \texttt{XOR}). Con estos operadores se podrán formar expresiones cuyo resultado será siempre un valor lógico (consulte la sección \ref{sec:logica} para conocer los valores lógicos posibles). En la figura \ref{fig:oplog} pueden verse ejemplos de expresiones lógicas.
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+enmovimiento = velocidad > 0;
+estado = reconocido && !(contador <= 30);
+conocido = isKnown(valor);
+\end{lstlisting}
+\end{minipage}
+\caption{Ejemplos de expresiones lógicas}
+\label{fig:oplog}
+\end{center}
+\end{figure}
+
+Para las cadenas de caracteres se permite sólo el paso de éstas como parámetros. la concatenación (\texttt{+}) y la comparación de igualdad (\texttt{==}) o desigualdad (\texttt{!=}) entre cadenas. En la figura \ref{fig:opcad} se pueden ver ejemplos de operación con cadenas de caracteres.
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+mensaje = "Bienvenido ";
+entrada = mensaje + "usuario";
+\end{lstlisting}
+\end{minipage}
+\caption{Ejemplos de expresiones con cadenas}
+\label{fig:opcad}
+\end{center}
+\end{figure}
+
+Finalmente, se podrá operar con los elementos del array, y nunca con el array completo. Para operar con un elemento del array habrá que extraerlo mediante el operador \texttt{[i]}, donde \texttt{i} es el índice, comprendido entre 0 y el tamaño máximo del array. Para asignar el valor a un elemento del array se referenciará al elemento de la misma manera. Además es posible asignar un array a otro, de tal manera que si el array de destino es mayor que el origen, los elementos restantes obtendrán el valor \texttt{UNKNOWN}. En caso de que el array destino fuera menor que el origen se produciría un error. En la figura \ref{fig:oparr} se puden ver varios ejemplos de manipulación de arrays.
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+Integer numeros[9];
+Integer X[6] = [1,3,5];
+numeros[8] = 9;
+X[5] = numeros[8] * X[2];
+numeros = X;
+\end{lstlisting}
+\end{minipage}
+\caption{Ejemplos de expresiones con arrays}
+\label{fig:oparr}
+\end{center}
+\end{figure}
+
+A continuación se describen varias operaciones que no admiten el uso de arrays:
+\begin{itemize}
+	\item Un array como valor de retorno de un comando o llamada a función.
+	\item Arrays completos como parte de una expresión (salvo asignación a otro array).
+	\item Arrays enteros como parámetro de una función (sólo se permiten elementos).
+	\item Arrays como variables dentro de una interfaz.
+\end{itemize}
+
+PLEXIL implementa un tipo de expresiones para el tiempo y la duración (\textit{Date and Duration expressions}) que son definidas bajo el estándar ISO-8601 \cite{ref:iso8601}. Este tipo de expresiones están pensadas para el uso de operaciones temporales para \textit{lookups} y actividades que requieran referencias de tiempo real. Permiten a su vez el uso de operaciones aritméticas como las vistas anteriormente.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+// Tiempo UTC
+Date fecha1 = Date("2013-12-12T09:43:00.00Z"); 
+
+// Hora local
+Date fecha2 = "2013-15-03T20:32:00.00";	
+
+// Duración de 45 minutos
+Duration dur1 = Duration("PT45M");
+
+// Ejemplo de operaciones
+Date fecha3;
+Duration dur2;
+
+// Resta de 3.2 segundos a la fecha1
+fecha3 = fecha1 - Duration("PT3.2S"); 
+
+// Resta de 2 minutos a la fecha2
+dur2 = fecha2 - Date("2013-15-03T20:30:00.00");
+
+\end{lstlisting}
+\end{minipage}
+\caption{Ejemplos de expresiones de tiempo y duración}
+\label{fig:datedur}
+\end{center}
+\end{figure}
+
+\subsection{Lógica trivaluada y el valor \texttt{UNKNOWN}}\label{sec:logica}
+
+En PLEXIL se utiliza una lógica de tres valores, en la cual a los valores típicos de las lógicas bivaluadas (\texttt{true} y \texttt{false}) se le añade el valor \texttt{UNKNOWN}. Por tanto, los operadores lógicos se han redefinido para operar con este valor como se ve en la figura \ref{fig:trival}.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=pascal, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+True    && UNKNOWN = UNKNOWN
+False   && UNKNOWN = False
+True    || UNKNOWN = True
+False   || UNKNOWN = UNKNOWN
+UNKNOWN && UNKNOWN = UNKNOWN
+UNKNOWN || UNKNOWN = UNKNOWN
+         ! UNKNOWN = UNKNOWN
+\end{lstlisting}
+\end{minipage}
+\caption{Operadores lógicos y el valor \texttt{UNKNOWN}}
+\label{fig:trival}
+\end{center}
+\end{figure}
+
+Además, como ya se indicó, el valor \texttt{UNKNOWN} puede aparecer como valor de cualquier tipo de variable, y, por tanto, puede ser resultado de una expresión. Esto último ocurrirá en los siguientes casos:
+\begin{itemize}
+	\item Aparece como valor inicial de una variable (ya sea simple o elementos de un array) por no haber declarado el valor inicial.
+	\item Es el estado final inicial de un nodo.
+	\item Como resultado de una consulta al estado del mundo fallida.
+	\item Como resultado de consultar acerca de un evento temporal que no ha ocurrido.
+\end{itemize}
+
+Este valor no aparece de forma literal, es decir, no se puede asignar de forma directa y solo aparece por las condiciones expuestas anteriormente. No obstante, mediante el empleo de la función \texttt{isKnown(\textit{variable})} se puede comprobar este valor. Si la función retorna \texttt{false}, entonces el argumento se puede evaluar a \texttt{UNKNOWN} y, en caso contrario, retornará \texttt{true}.
+
+
+\section{Condiciones}\label{sec:condiciones}
+Para el control de la ejecución de cada nodo al inicio, fin o durante, se pueden definir hasta siete condiciones. Cada condición irá seguida de una expresión booleana: \texttt{tipo\_condicion <expresión\_booleana>;}. Estas siete condiciones se enmarcarán en dos grupos: las \textit{gate conditions}, que comprende las condiciones de inicio, finalización, repetición y omisión, y el grupo denominado \textit{check conditions}, dentro del cual están las precondiciones, postcondiciones y condiciones invariables. El primer grupo determinará cuando el nodo puede comenzar o finalizar su ejecución y el segundo grupo permite determinar condiciones por las cuales la ejecución del nodo no fue correcta. En la figura \ref{fig:ejcondiciones} puede verse un ejemplo de un nodo con todas las condiciones definidas.
+
+A la hora de trabajar con las condiciones será muy útil (y necesario en muchos casos) permitir o no la ejecución de un nodo en función del resultado de la ejecución de otro. Para ello se podrán utilizar los estados de los nodos (veáse la sección \ref{sec:estados}) en las condiciones.
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+subir_temperatura:
+{
+	StartCondition temperaturaBaja;
+	EndCondition temperatura >= 20 || isKnow(temperatura);
+	RepeatCondition temperatura < 20;
+	SkipCondition temperatura > 20 || !temperaturaBaja;
+	PreCondition temperatura > -10 && temperatura <30;
+	PostCondition temperatura > -10;
+	InvariantCondition !temperaturaBaja;
+	Command: temperatura = SubirTemp(incremento);
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Ejemplo de nodo con todas las condiciones}
+\label{fig:ejcondiciones}
+\end{center}
+\end{figure}
+
+\subsection{Condición de inicio, \textit{StartCondition}}
+
+Esta condición indica cuando el nodo puede comenzar a ejecutarse. En el momento que la condición indicada se cumpla, éste comenzará su ejecución. En caso de no haber, el nodo iniciará la ejecución en el momento que la ejecución del plan alcance el nivel de profundidad del nodo en cuestión.
+
+\subsection{Condición de finalización, \textit{EndCondition}}
+
+Indica la condición para que el nodo termine su ejecución. En caso de omitirse, el nodo terminará la ejecución una vez haya realizado la acción de su cuerpo.
+
+\subsection{Condición de repetición, \textit{RepeatCondition}}
+
+Esta condición permite que un nodo que ya ha sido ejecutado vuelva a ser apto para ejecutarse. Para ello, el nodo en cuestión deberá cumplir con la condición de repetición y la condición de inicio y precondición en caso de tenerlas. Hay que tener en cuenta que un nodo que ya ha sido ejecutado (correcta o incorrectamente) no se volverá a ejecutar salvo que se indique una condición de repetición.
+
+\subsection{Condición de omisión, \textit{SkipCondition}}
+
+La condición de omisión permite establecer un nodo como ejecutado por omisión (que implica que el nodo haya finalizado su ejecución). En caso de que un nodo posea esta condición y se verifique en el momento en que pueda entrar en ejecución, el nodo no será ejecutado. Esta condición permite definir saltos del tipo \texttt{if-then-else} combinándola con otras condiciones.
+
+\subsection{Precondición, \textit{PreCondition}}
+
+Esta condición se evalúa después de la condición de inicio y determina si es seguro proceder a la ejecución del nodo. Para que un nodo pueda ejecutarse, deberá verificar primero la condición de inicio y luego la precondición. En caso de no cumplir la precondición, el nodo no podrá ejecutarse y será abortado indicando que la ejecución ha sido fallida.
+
+\subsection{Postcondición, \textit{PostCondition}}
+
+La postcondición se evalúa tras la ejecución del nodos y después de evaluar la condición de finalización. Esta condición permite comprobar si el nodo ha realizado su función correctamente. Si la condición especificada no se cumple, el nodo no habrá cumplido con sus objetivos y se marcará como fallido.
+
+\subsection{Condición invariable, \textit{InvariantCondition}}
+
+Esta condición será comprobada durante toda la ejecución del nodo de tal forma que deberá cumplirse en todo momento. Si en el transcurso de la ejecución se da alguna circunstancia que implique que la condición invariable no se cumpla, se abortará la ejecución del nodo y se marcará como fallido. Es una condición útil para determinar las condiciones de seguridad en las cuales debe ejecutarse el nodo.
+
+
+\subsection{Jerarquía de condiciones}
+
+Las condiciones se pueden agrupar en una jerarquía en base al control de inicio, ejecución y finalización del nodo. Esta jerarquía puede verse en la figura \ref{fig:jcond} y es como sigue:
+\begin{itemize}
+	\item \textbf{Inicio del nodo}: la primera condición que se verificará es la condición de omisión, sólo si ésta se verifica podrán comprobarse el resto, sino se omitirá el nodo. Después se comprobará la condición de inicio, no comprobándose el resto hasta que esta no se satisfaga. Una vez comprobada esta condición, se podrá ver si se cumple la precondición, y, en caso de cumplirse, se ejecutará el nodo. Si la precondición no se cumple, el nodo finalizará por fallo en la precondición. En caso de que el nodo disponga de una condición de repetición, será la última en comprobarse siempre que el nodo ya se haya ejecutado al menos una vez.
+	\item \textbf{Ejecución del nodo}: durante la ejecución del nodo se comprobará la condición invariante. Está deberá verificarse durante todo el período de ejecución del nodo, provocando el aborto de la ejecución en caso de no cumplirse. En dicho caso, lo indicará mediante un fallo en la condición invariante.
+	\item \textbf{Finalización del nodo}: una vez ejecutado el nodo, se comprobará la condición de finalización. En caso de cumplirse, será comprobada la postcondición. Hasta que no se verifique la condición de finalización el nodo seguirá en estado de ejecución. Si la condición de finalización es correcta, pero la postcondición no, el nodo finalizará con un fallo por la postcondición.\\
+\end{itemize}
+
+\begin{figure}[h]
+\begin{center}
+ \includegraphics[width=10cm]{condiciones}
+ \caption{Jerarquía de condiciones}
+ \label{fig:jcond}
+\end{center}
+\end{figure}
+
+
+\section{Tipos de nodos}\label{sec:tipos}
+
+En esta sección se describirán los seis\footnote{Existe un séptimo tipo de nodo, el nodo de solicitud de planificación (\textit{Plan Request node}), que está diseñado y parcialmente implementado. Este nodo soporta interacción con planificadores externos permitiendo un punto de enganche para añadir un nuevo plan. En este momento este tipo no esta soportado oficialmente por PLEXIL ni es plenamente funcional.} tipos de nodos existentes en PLEXIL. Como ya se dijo anteriormente, los nodos se estructuran como un árbol. En este sentido, se conservarán las definiciones clásicas: el nodo superior en la jerarquía será la raíz, siendo un nodo \textit{lista} del cual colgarán más nodos que pueden ser hojas (nodos de cualquier tipo que no sea lista) u otro nodo lista que generará otro nivel de profunidad en el árbol. Será importante la distinción entre nodo padre e hijo: un nodo padre será un nodo lista y los hijos los nodos inmediatamente inferiores que dependan de dicho nodo. Por tanto, un nodo lista será siempre un nodo interior y cualquier otro tipo de nodo será un nodo hoja e hijo de un nodo lista. Serán estos nodos hojas los encargados de interactuar con el mundo y realizar las acciones pertientes del plan.
+
+A continuación se analizarán los seis tipos de nodos. Aquí se verán los elementos que conforman parte del cuerpo del nodo para cada tipo particular.
+
+\subsection{Nodo vacío, \textit{Empty node}}
+
+Un nodo vacío es aquel que no realiza ninguna acción. Estos nodos sólo pueden contener atributos y en la práctica son poco comunes y su utilidad suele ser verificar el estado del mundo exterior. En este sentido tendrá alguna condición que permita realizar una comprobación y, en base a ello, generar un estado de salida del nodo que sea útil para la ejecución de otro nodo.
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+ExcesoTemp:
+{
+	PostCondition LookupNow("temperatura") > 100.0;
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Ejemplo de nodo vacío}
+\label{fig:nvacio}
+\end{center}
+\end{figure}
+
+
+\subsection{Nodo de asignación, \textit{Assignment node}}
+
+Un nodo de asignación permite modificar el estado de una variable mediante una expresión lógica o matemática. En el lado izquierdo de la expresión deberá haber una variable apta para escritura y en el lado derecho una expresión. Esta expresión constará de, al menos, un operando o literal (en caso de una asignación simple) o dos operandos unidos por un operador. En todos los casos, el resultado de la expresión debe ser del mismo tipo que la variable a la cual se asignará el resultado. Los operandos pueden ser una varible simple, un elemento de un array (nunca un array completo) o un literal. Dentro de la expresión se pueden utilizar paréntesis para priorizar los cálculos. La clausula de asignación y un ejemplo de nodo de asignación se pueden ver en la figura \ref{fig:nasignacion}. Sólo podrá haber una clausula de asignación por nodo con una única asignación. En actuales revisiones de PLEXIL, se permite la omisión del \textit{tag} \texttt{Assignment:}.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+Assignment: <variable> = <expresion>;
+
+incrementarAngulo:
+{
+	Assignment: angulo = angulo + 25;
+}
+
+convertirTempSens2
+{
+	Assignment: temperatura = (sensorTemp[2] - 32) * 5 / 9;
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Clausula de asignación y ejemplos}
+\label{fig:nasignacion}
+\end{center}
+\end{figure}
+
+
+\subsection{Nodo de comando, \textit{Command node}}
+
+Los nodos de comando permiten ejecutar acciones soportadas e implementadas en el sistema a controlar. El funcionamiento de estos nodos será llamar a una función externa con los parámetros adecuados. Estos parámetros será una lista formada por literales o variables, pero nunca por expresiones. Además, si la función implementada retorna un valor de un tipo reconocido por PLEXIL, podrá ser asignado a una variable. En la figura \ref{fig:ncomando} puede verse la clausula que determina al nodo de comando. Ésta especifica el nombre del comando a ejecutar seguido por la lista de parámetros que utilizará entre paréntesis. La lista de parámetros estará separada por comas y será opcional. En caso de querer asignar el valor resultante a una variable, bastará con indicarlo mediante la asignación correspondiente, siempre y cuando sea posible escribir en dicha variable desde el nodo. En actuales revisiones de PLEXIL, se permite la omisión del \textit{tag} \texttt{Command:}.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+Command: [<variable> =] <comando> [(<lista_args>)];
+
+Rotar:
+{
+	StartCondition angulo != 0;
+	RepeatCondition angulo != 0;
+	Command: rotar(angulo);
+}
+
+ConfirmarOrden:
+{
+	Boolean resultado;
+	EndCondition isKnown(resultado);
+ 	PostCondition resultado;
+	Command: resultado = SolConfirm("¿Ejecutar instrucción?",numInstruccion);
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Clausula de comando y ejemplos}
+\label{fig:ncomando}
+\end{center}
+\end{figure}
+
+Los nodos de comando no bloquean la ejecución, es decir, la ejecución de los comandos se lleva a cabo de manera asíncrona. A todo comando en ejecución se le asigna un manejador para que, una vez finalice, lo indique de forma inmediata al ejecutor. En caso de que el comando retorne un valor, y ya que la ejecución es asíncrona, es común definir una condición de finalización del nodo para que éste sólo finalice una vez recibido el dato. Esto puede hacerse mediante la función \texttt{isKnown()}, ya que durante la ejecución del comando el valor de retorno se establece a \texttt{UNKNOWN}.
+
+Además, se pueden establecer necesidades y usos de recursos para la ejecución de comandos; ésto se verá en la sección \ref{sec:recursos}.
+
+
+% subsection{Nodo de llamada a función, \textit{Function call node}}
+
+%Los nodos de llamada a función son muy similares en forma a los nodos de comando, pero se emplean para contextos diferentes. Los nodos de comando son aquellos que tienen un tiempo de ejecución arbitrario y están enfocados a manipular los elementos del mundo en el cual se halla el sistema, mientras que los nodos de llamada a función se estiman que tienen un tiempo de computo ínfimo (cercano a cero) y no afectan al estado del mundo, sólo realizan cálculos internos. Debido a esto, se asume de forma predefinida que la condición de finalización es que la función haya retornado su valor.
+
+%La declaración de un nodo de llamada a función será idéntica (salvo por la cláusula, que será \texttt{FunctionCall}) a la forma empleada en los nodos de comando. Deberemos llamar a la función por su nombre, especificando la lista de parámetros necesarios (literales o variables, nunca expresiones), y, opcionalmente, asignar el valor de retorno a una variable. En todo caso, el valor de retorno será un tipo simple de los cuatro válidos, nunca pudiendo retornar un tipo compuesto como un array por ejemplo.
+
+%\begin{figure}[!h]
+%\begin{center}
+%\begin{minipage}{12cm}
+%\lstset{language=c++, breaklines=true, tabsize=3}
+%\lstset{commentstyle=\textit}
+%\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+%\begin{lstlisting}[frame=trbl]{}
+%FunctionCall: [<variable> =] <nombre_funcion> (<lista_args>);
+%CalcularCombinatorio:
+%{
+%	In Integer n, r;
+%	InOut Real resultado;
+%	FunctionCall: resultado = Combinatorio(n,r);
+%}
+%\end{lstlisting}
+%\end{minipage}
+%\caption{Clausula de llamada a función y ejemplo}
+%\label{fig:nfuncion}
+%\end{center}
+%\end{figure}
+
+
+\subsection{Nodo de actualización, \textit{Update node}}
+
+Este nodo permite actualizar el valor de una o más variables en un único nodo, sustituyendo el valor actual de la variable por el valor de otra variable o de un literal, pero nunca por el resultado de una expresión. Para ello, hay que declarar la clausula \texttt{Update} seguida de una lista separada por comas y formada por pares \texttt{variable=variable} o \texttt{variable=literal}, que representarán la variable que queremos actualizar a la izquierda y el nuevo valor a la derecha. En la figura \ref{fig:nactualizacion} puede verse un ejemplo de nodo de actualización.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+Update: (<nombre> = (<valor> | <variable>))*;
+
+ActualizarDatos:
+{
+	Integer actualizado;
+	Update: actualizado = resultado[1], anterior = -2;
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Clausula de actualización y ejemplo}
+\label{fig:nactualizacion}
+\end{center}
+\end{figure}
+
+\subsection{Nodo de llamada a librería, \textit{Library call node}}
+
+Estos nodos permiten enlazar con nodos librería, cuyos detalles se verán en la sección \ref{sec:nodoslib}. Los nodos de llamada a librería constan de una clausula \texttt{LibraryCall} tal y como se muestra en la figura \ref{fig:nllamlibreria}. En ella puede verse el identificador del nodo librería que será utilizado, así como la posibilidad de renombrarlo en el contexto del plan en ejecución si así se desea. Finalmente, aparece una lista de argumentos que actuarán como si de una función se tratará. Está lista deberá declarar el nombre del parámetro y mediante una asignación indicar el valor que éste debe tomar al realizar la llamada. Sólo será posible asignar literales o variables. La codificación completa junto a un ejemplo se verá en la sección \ref{sec:nodoslib}.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+LibraryCall: <IdNodo> [<NuevoIdNodo>] [<lista_alias>];
+\end{lstlisting}
+\end{minipage}
+\caption{Clausula de llamada a librería}
+\label{fig:nllamlibreria}
+\end{center}
+\end{figure}
+
+
+\subsection{Nodo lista, \textit{List node}}
+
+Un nodo lista es un nodo que permite declarar una lista de cero o más nodos hijos. Estos nodos son los que le dan la estructura jerárquica a PLEXIL. Los hijos de un nodo lista podrán ser de cualquier tipo de nodo, incluyendo nodos lista. Para declarar un nodo lista basta con especificar la clausula \texttt{NodeList} seguida de la declaración de los nodos hijos deseados como puede verse en la figura \ref{fig:nlista}.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+NodeList:
+<nodo1>
+...
+<nodoN>
+
+root:
+{
+	Integer x;
+	NodeList:
+	Informar:
+	{
+		Command: Mostrar("Plan en ejecución...");
+	}
+	LeerX:
+	{
+		Command: x = GetX();
+	}
+	Accion:
+	{
+		Boolean resultado;
+		StartCondition LeerX.state == FINISHED;
+		EndCondition isKnown(resultado);
+		PostCondition resultado;
+		Command: resultado = Operar(x);
+	}
+	InformarCorrecto:
+	{
+		StartCondition Accion.outcome == SUCCESS;
+		SkipCondition Accion.outcome == FAILURE;
+		Command: Mostrar("Operación correcta");
+	}
+	InformarFallo:
+	{
+		StartCondition Accion.outcome == FAILURE;
+		SkipCondition Accion.outcome == SUCCESS;
+		Command: Mostrar("Operación fallida");
+	}
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Clausula de lista y ejemplo}
+\label{fig:nlista}
+\end{center}
+\end{figure}
+
+Los nodos lista ejecutarán por defecto todos los nodos hijos de forma concurrente y, la ejecución del nodo finalizará una vez todos los nodos hijos hayan finalizado su ejecución. Si se desea controlar la secuencia de ejecución de los nodos habrá que recurrir a la utilización de condiciones de ejecución. Gracias a esto, se puede realizar la ejecución de nodos en serie siguiendo la pauta deseada, realizar bucles en función de los resultados, o saltar determinados nodos en función de la ejecución de otros. En este último caso, dado que el nodo padre sólo finalizará tras la ejecución de los hijos, será necesario incluir una condición para omitir la ejecución del nodo cuando no se den las condiciones necesarias para su ejecución, de cara a que el nodo padre pueda finalizar su ejecución y no haya peligro de provocar un bloqueo en otros nodos en el nivel del padre.
+
+
+\section{Declaraciones globales}
+
+Para los planes que posean llamadas a funciones, comandos, nodos librerías o consultas al mundo exterior, es recomendable (y obligatorio para los nodos librería) definir la interfaz de las mismas usando declaraciones globales. Estas declaraciones será una lista separada por ';' al comienzo del fichero de Plexil, justo antes de la definición del nodo raíz y en cualquier orden, tal y como puede verse en el ejemplo de la figura \ref{fig:declglob}.
+
+Las declaraciones globales son útiles ya que permiten visualizar rápida y cómodamente toda la interfaz externa definida para el plan en un único vistazo, así como comprobar de forma estática la corrección y consistencia de las declaraciones indicadas.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+Command detener();
+Integer Command	elevar(Integer num, Integer exp);
+Real Lookup difTemperatura(Real tempAnt);
+LibraryNode RaizCuadrada(In Real a, In Real b, In Real c, InOut Real x1, InOut Real x2);
+\end{lstlisting}
+\end{minipage}
+\caption{Ejemplo de declaraciones globales}
+\label{fig:declglob}
+\end{center}
+\end{figure}
+
+
+\section{Nodos librería}\label{sec:nodoslib}
+
+A las variables declaradas en la interfaz de un nodo se les llama también parámetros. Al definir la interfaz se puede declarar también el tipo de la variable o parámetro. Esto último es útil y obligatorio para lo que se conoce como nodos librería o \textit{library nodes}. Estos nodos no son un tipo de nodo como tal, sino que definen la interfaz necesaria para que los nodos de llamada a librería puedan interactuar con el nodo librería definido que puede ser de cualquiera de los tipos vistos anteriormente. 
+
+Los nodos librería deberán especificar tanto la interfaz como el tipo de los datos que serán reemplazados por los valores asignados mediante el nodo de llamada a librería. Además, estos nodos serán el nodo de mayor nivel dentro de la jerarquía del plan en el que estén contenidos\footnote{Actualmente sólo se permite un nodo superior o \textit{top level} en un plan.}. Por tanto, todo nodo superior de un plan podrá ser utilizado como nodo librería y usado para ser llamado desde un nodo librería desde otro plan. 
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+--- archivo F.ple ---
+F:
+{
+  In Integer i;
+  InOut Integer j;
+  Assignment: j = j * j + i;
+}
+--- final F.ple ---
+
+--- archivo llamadaLibreria.ple ---
+LibraryNode F(In Integer i, InOut Integer j);
+llamadaLibreria:
+{
+  Integer k = 2;
+  LibraryCall: F(i=12, j=k);
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Ejemplo de nodo librería y nodo de llamada a librería}
+\label{fig:nlibreria}
+\end{center}
+\end{figure}
+
+En la figura \ref{fig:nlibreria} puede verse un ejemplo de un nodo librería y la forma de codificar un nodo de llamada a librería para que interactúe con el primero. Dado que cada fichero PLEXIL sólo contiene un plan y que un plan sólo puede tener un nodo superior, será necesario el empleo de un archivo por cada nodo librería a utilizar más otro para el que implemente los nodos de llamada a librería. Además, habrá que declarar antes de la codificación del plan los nodos librería que vamos a usar mediante la correspondiente declaración global. Para ello se hará uso de la notación \texttt{LibraryNode <nombre>[(<lista\_args>)]}, donde \texttt{nombre} es el nombre del nodo raíz del fichero librería (el nombre del fichero se indicará al llamar al ejecutor) y \texttt{lista\_args} será la lista de parámetros (si es necesaria) que requiere la interfaz del nodo librería usado. Habrá que declararlos indicando su interfaz, tipo (el tipo debe coincidir exactamente, no se permite conversión implícita de enteros a reales, por ejemplo) y nombre de parámetro y separando cada parámetro de la lista por comas. Para llamar al nodo librería bastará con declarar un nodo de llamada a librería en cualquier punto del plan indicando el nombre del parámetro y el valor que se le asignará al realizar la sustitución de valores.
+
+Puede verse que un nodo librería se comporta como una función, pero es extensible al nivel que deseemos, ya que el nodo librería puede ser cualquier tipo de nodo, puede declararse como un nodo lista con una serie de nodos de comando, asignación o la combinación que deseemos, lo que permite incrustar un plan dentro de otro en el punto que deseemos. Esto permite una gran versatilidad a la hora de modelar planes de gran tamaño (permite generar ficheros de menor tamaño y más cómodos de manipular) o ejecutar un plan u otro en base a los estados del plan inicial. A la hora de ejecutar el plan, el nodo librería se expandirá completamente en el plan original y se ejecutará concurrentemente a éste como si se tratase de un nodo más del plan original.
+
+
+\section{Instrucciones de alto nivel}\label{sec:altonivel}
+
+En las últimas revisiones de PLEXIL, se han implementado acciones de alto nivel, similares a las utilizadas en otros lenguajes de programación más extendidos. La utilidad de las instrucciones de alto nivel es notable en la simplificación del código, siendo en general una abstracción a la hora de programar los nodos vistos anteriormente.
+
+\subsection{Secuencia ordenada, \textit{Sequence}}
+Los nodos descritos dentare de una instrucción de tipo \textit{Sequence} son ejecutados en el mismo orden en el que son descritos. Si alguno de los nodos de la secuencia falla, (estado del nodo \textit{FAILURE}), toda la secuencia terminará mostrando el estado de \textit{FAILURE}. La sintaxis de esta acción se puede ver en la \ref{fig:sequence} mostrada a continuación. El núcleo de PLEXIL permite la omisión de la etiqueta \texttt{Sequence}, siendo obligatorio el uso de las llaves \texttt{\{...\}}.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+Sequence
+{
+	Nodo1:
+			...
+	Nodo2: 	
+			...
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Sintaxis de la instrucción de alto nivel \texttt{Sequence}}
+\label{fig:sequence}
+\end{center}
+\end{figure}
+
+\subsection{Secuencia no verificada, \textit{Unchecked Sequence}}
+La ejecución de esta instrucción es similar a la instrucción \texttt{Sequence}, a excepción de que la comprobación de la ejecución en los nodos no es verificada. Ante el fallo de un nodo intermedio, no se detiene la ejecución y se continúa con el siguiente nodo.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+UncheckedSequence
+{
+	Nodo1:
+			...
+	Nodo2: 	
+			...
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Sintaxis de la instrucción de alto nivel \texttt{UncheckedSequence}}
+\label{fig:unsequence}
+\end{center}
+\end{figure}
+
+\subsection{Intento (\textit{Try})}
+Este tipo de instrucción es derivado de \textit{Sequence} donde se ejecutan los nodos de forma secuencial, hasta que uno de ellos finaliza correctamente. En este caso se abandona la instrucción y el resultado es correcto (\texttt{SUCCESS})
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+Try
+{
+	Nodo1:
+			...
+	Nodo2: 	
+			...
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Sintaxis de la instrucción de alto nivel \texttt{Try}}
+\label{fig:try}
+\end{center}
+\end{figure}
+
+\subsection{Concurrencia, \textit{Concurrence}}
+Las instrucciones \textit{Concurrence} son de carácter concurrente o simultáneas. Permiten la ejecución en paralelo de los nodos descritos en su interior. Dado el empleo de PLEXIL en actividades de tiempo real, cabe destacar que el máximo tiempo de ejecución de los nodos descritos en esta instrucción, será directamente proporcional al nodo más lento. Todas las acciones terminarán a la vez. No obstante, por medio de las \textit{Conditions} vistas anteriormente, se puede modificar el comportamiento de ejecución del nodo, modificando los inicios y finales de los nodos a ejecutar. En el ejemplo de la figura \ref{fig:concurrence}, \texttt{Nodo1} y \texttt{Nodo2} se ejecutarán en paralelo, mientras que el \texttt{Nodo3} no comenzará su ejecución hasta no finalizar el \texttt{Nodo1}.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+Concurrence
+{
+	Nodo1:
+			...
+	Nodo2: 	
+			...
+	Nodo3:
+			StartCondition Nodo1.state = = FINISHED;
+			...
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Sintaxis de la instrucción de alto nivel \texttt{Concurrence}}
+\label{fig:concurrence}
+\end{center}
+\end{figure}
+
+\subsection{Instrucción condicional, \textit{if-then-else}}
+Este tipo de instrucción evalúa una condición inicial (\texttt{if}). Si es correcta (\texttt{true}), pasa a ejecutarse los nodos en su interior, en caso de no ser correcta (\texttt{false} o \texttt{Unknown}), es ignorada. 
+
+Se ha implementado a su vez \texttt{else} que pasa a su ejecución si la condición anterior no es correcta, o \texttt{elseif} que en caso de no ser correcta la condición anterior, pero se cumpla la condición impuesta a continuación. La sintaxis se muestra en la imagen \ref{fig:ifelse}, donde las condiciones \texttt{condition1} y \texttt{condition2} son expresiones lógicas de tipo \textit{Bool}. 
+
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+if condicion1
+{
+	...
+} elseif condicion2
+{
+	...
+} else
+{
+	...
+}
+endif
+\end{lstlisting}
+\end{minipage}
+\caption{Sintaxis de la instrucción de alto nivel \texttt{If-then-else}}
+\label{fig:ifelse}
+\end{center}
+\end{figure}
+
+En la figura \ref{fig:ejifelse} se muestra un ejemplo de ejecución de una instrucción \textit{if-then-else} con dos condiciones evaluadas. Es importante destacar que PLEXIL permite la evaluación de condiciones sin el uso de paréntesis para determinar el resultado. Es de buena práctica emplear estos para una correcta depuración. A modo de ejemplo, se ha planteado el uso anidado de instrucciones de alto nivel, como son \textit{Sequence} y \textit{Concurrence}.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+if dato1>= dato2
+{
+	Sequence
+	{
+		Nodo1: 
+				...
+		Nodo2: 
+				...
+	}
+} 
+elseif (dato1 < (dato2 - 5))
+{
+	Concurrence
+	{
+		Nodo3:
+				...
+		Nodo4:
+				...
+	}
+} else
+{
+	Nodo5:
+			...
+}
+endif
+\end{lstlisting}
+\end{minipage}
+\caption{Ejemplo de código de la instrucción de alto nivel \texttt{If-then-else}}
+\label{fig:ejifelse}
+\end{center}
+\end{figure}
+
+\subsection{Bucle \textit{While}}
+Los bucles \textit{While} son instrucciones muy utilizadas para la repetición condicionada de un nodo. Se evalúa la condición inicial, y si es correcto (\texttt{true}) se pasa a su ejecución. Al finalizar este, se vuelve a evaluar, y en caso de cumplirse la condición, se repite de forma iterativa. La condición de escape sólo se evalúa al finalizar la iteración anterior, pero puede controlarse con las \textit{EndConditions} vistas en \ref{sec:tipos}.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+while condicion
+{
+	...
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Sintaxis de la instrucción de alto nivel \texttt{While}}
+\label{fig:while}
+\end{center}
+\end{figure}
+
+\subsection{Bucle \textit{for}}
+Este tipo de bucles evalúan una condición mediante una variable, cuyo valor es modificado en cada iteración. La variable evaluada debe ser de tipo \texttt{Integer} o \texttt{Real}, y la condición debe dar un resultado de tipo \texttt{Bool} (\texttt{true}, \texttt{false} o \texttt{Unknown}). En la figura \ref{fig:for} se puede ver un ejemplo de la sintaxis de la instrucción \textit{for}.
+
+En este caso, la documentación de PLEXIL exige el uso de paréntesis para la definición de la instrucción \texttt{for}. Cada uno de los campos o parámetros del bucle, se deberán separar por ';'.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+for (TIPO variable = valor_inicial;  variable_condicion; modificación variable)
+{
+	...
+}
+
+// Ejemplo
+for (Integer i = 0; i <= num_max; i + 1) { ... }
+for (Real k = 300; k ! = 200; K - 2 * (301-K) ) { ... }  
+\end{lstlisting}
+\end{minipage}
+\caption{Sintaxis de la instrucción de alto nivel \texttt{For}}
+\label{fig:for}
+\end{center}
+\end{figure}
+
+\subsection{Instrucción \textit{OnCommand}}
+La instrucción \textit{OnCommand} es una llamada a un comando externo al plan de PLEXIL. Se utiliza en configuraciones con múltiples ejecutores donde un ejecutor recibe un comando enviado por otro ejecutor. El principal uso de esta instrucción es la ejecución de comandos remotos entre sistemas. La sintaxis de la instrucción (figura \ref{fig:oncommand}) requiere del nombre del comando a llamar (\texttt{command-name}), una lista de parámetros requeridos para su ejecución (\texttt{parámetros}) y un comando de retorno obligatorio (\texttt{SendReturnValues(valor)} donde \texttt{valor} será \texttt{true} en caso de ser omitido el comando de retorno).
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+OnCommand <command-name> [ parametros]
+	<action>;
+	
+<command-name>:		// Nodo remoto
+	...
+	SendReturnValues(<valor>);
+\end{lstlisting}
+\end{minipage}
+\caption{Sintaxis de la instrucción de alto nivel \texttt{OnCommand}}
+\label{fig:oncommand}
+\end{center}
+\end{figure}
+
+\subsection{Instrucción \textit{OnMessage}}
+Instrucción similar a \texttt{OnCommand}, salvo que se prescinde de parámetros y sólo se recibe el texto devuelto por el mensaje \texttt{SendMessage(\textless string\textgreater)}.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+OnMessage <command-name>
+	<action>;
+
+<command-name>:		// Nodo remoto
+	...
+	SendMessage(<string>);
+\end{lstlisting}
+\end{minipage}
+\caption{Sintaxis de la instrucción de alto nivel \texttt{OnMessage}}
+\label{fig:onmessage}
+\end{center}
+\end{figure}
+
+
+\subsection{Comandos síncronos, \textit{Synchronous Commands}}
+
+PLEXIL provee un estilo de comandos de ejecución síncrona donde se toma como referencia el tiempo (\texttt{time}). El tiempo (\texttt{time}) no es un concepto especial de PLEXIL, es una referencia externa a un estado del mundo. Puede verse en profundidad el uso del tiempo en el apartado \ref{sec:mundoexterior}. En los comandos síncronos, se puede pasar por parámetros un \textit{timeout} y una tolerancia, que indica el tiempo máximo que puede esperar el comando para recibir el valor ejecutado. Superado este tiempo, se finaliza la ejecución. En la figura \ref{fig:sincronos} se puede observar varios ejemplos de funcionamiento de la instrucción \texttt{SynchronousCommand}.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+\\ Llamada a la funcion sin parámetros
+SynchronousCommand funcion ();
+
+\\ Llamada a función con argumentos y un timeout de 5.0 
+\\ unidades de tiempo y tolerancia 0.1 unidades de tiempo
+SynchronousCommand valorRetornado = funcion(parametro1, 
+							parametro2, ...) Timeout 3.0, 0.1;
+
+\end{lstlisting}
+\end{minipage}
+\caption{Sintaxis de la instrucción de alto nivel \texttt{Synchronous Command}}
+\label{fig:sincronos}
+\end{center}
+\end{figure}
+
+\subsection{Instrucción de espera, \textit{Wait}}
+
+Instrucción que bloquea la ejecución a la espera de un determinado intervalo de tiempo. Del mismo modo que los comando síncronos, el concepto de \texttt{time} en PLEXIL es un estado del mundo, que debe ser cambiado de forma externa al plan desarrollado. En la figura \ref{fig:wait} se puede ver un ejemplo de aplicación.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+\\ 3.0 unidades de tiempo
+Real tiempo = 3.0; 
+
+\\ Tolerancia de 0.1 unidades de tiempo
+Real tolerancia = 0.1;
+
+Wait tiempo, tolerancia;
+\end{lstlisting}
+\end{minipage}
+\caption{Sintaxis de la instrucción de alto nivel \texttt{Wait}}
+\label{fig:wait}
+\end{center}
+\end{figure}
+
+\section{Posibles estados de los nodos}\label{sec:estados}
+
+En PLEXIL los nodos pueden acceder a una serie de estados internos que indican como se encuentra el nodo. Cada nodo podrá acceder a su estado interno, el de sus hermanos, hijos o padres, pero no más lejos. El estado interno de un nodo consiste en varios valores:
+\begin{itemize}
+	\item \textbf{Estado de ejecución}: determina en que fase de la ejecución se halla el nodo. Para ello se utiliza la clausula \texttt{<NodeId>.state} que retornará uno de los siete valores mostrados en la figura \ref{fig:estados}. Los estados posibles son:
+	\begin{itemize}
+		\item INACTIVE: la ejecución del plan todavía no ha llegado al nodo, y, por tanto, éste no puede entrar en ejecución y esta inactivo.
+		\item WAITING: la ejecución del plan ha llegado al nivel del nodo y éste puede entrar en ejecución, pero está a la espera de que se cumpla la condición de inicio para comenzar su ejecución.
+		\item EXECUTING: una vez el nodo verifica la condición de inicio, pasa a ejecución. Ahora comprobará la precondición y ejecutará el resto del cuerpo del nodo. Este estado se mantiene hasta la finalización del nodo.
+		\item FINISHING: completada la ejecución del nodo, este pasa a finalizando. Aquí comprueba las condiciones de finalización y postcondiciónes.
+		\item ITERATION\_ENDED: tras comprobar las condiciones de finalización, el nodo pasa a este estado que indica que ha finalizado una ejecución. En caso de tener una condición de repetición, pasará al estado de espera para poder volver a ejecutarse.
+		\item FINISHED: el estado finalizado indica que el nodo ha terminado su ejecución y que no es apto para volver a ser ejecutado (no tiene condición de repetición).
+		\item FAILING: este estado indica que se ha producido un error durante la ejecución del nodo y que se abortará la ejecución del mismo.
+	\end{itemize}	
+	\item \textbf{Tiempo de inicio o finalización}: permite conocer el instante de tiempo en el cual ha empezado o finalizado cada uno de los siete posibles estados del nodo. Si el estado o punto de tiempo solicitado no ha ocurrido, entonces devolverá UNKNOWN. Para conocer el tiempo se utiliza una clausula como la que sigue: \texttt{<NodeId>.<node state>.<timepoint>} donde \texttt{nodestate} corresponde a uno de los siete descritos anteriormente y \texttt{tiempoint} será START o END.
+	\item \textbf{Estado o valor de salida}: el estado de salida será un valor devuelto por el nodo al finalizar su ejecución. Para conocer este valor se utiliza la clausula \texttt{<NodeId>.outcome} y puede devolver uno  de los siguientes cuatro valores:
+	\begin{itemize}
+		\item SUCCESS: el nodo ha terminado correctamente.
+		\item FAILURE: el nodo ha fallado en su ejecución.
+		\item SKIPPED: no se ha ejecutado el nodo ya que se cumplía la condición de omisión.
+		\item UNKNOWN: el nodo está en ejecución o no se ha ejecutado todavía.
+	\end{itemize}
+	\item \textbf{Estado de fallo}: en caso de que un nodo haya fallado en se ejecución, mediante la clausula \texttt{<NodeId>.failure} se puede conocer la causa de dicho fallo. Ésta nos devolverá uno de los siguientes cinco valores:
+	\begin{itemize}
+		\item PRE\_CONDITION\_FAILED: el nodo no ha podido ejecutarse por no verificar la precondición tras poder entrar en ejecución al verificar la condición de inicio.
+		\item POST\_CONDITION\_FAILED: el nodo ha sido ejecutado y ha verificado la condición de finalización pero no la postcondición, y, por tanto, su ejecución es incorrecta.
+		\item INVARIANT\_CONDITION\_FAILED: indica que el nodo ha abortado su ejecución por no verificar la condición invariante en algún momento de su ejecución.
+		\item PARENT\_FAILED: indica un fallo en el nodo debido a un fallo en la ejecución de su nodo padre.
+		\item UNKNOWN: devolverá este valor en caso de haber acabado correctamente.
+	\end{itemize}
+	\item \textbf{Estado del manejador de comando} (sólo para nodos de comando): este estado permite conocer la última respuesta del manejador de comando asignado al nodo solicitado. Los valores y significados posibles para el manejador de comando se verán en la sección \ref{sec:mcom}.
+\end{itemize}
+
+En la figura \ref{fig:estados} pueden verse todos los posibles estados y la sintaxis de los mismos.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+<nodeId>.state <= {INACTIVE, WAITING, EXECUTING, FINISHED, ITERATION_ENDED, FAILING, FINISHING}
+
+<nodeId>.<nodestate>.<{START, END}> <= <marca de tiempo>
+
+<nodeId>.outcome <= {SUCCESS, FAILURE, SKIPPED, UNKNOWN}
+
+<nodeId>.failure <= {INVARIANT_CONDITION_FAILED, POST_CONDITION_FAILED, PRE_CONDITION_FAILED, PARENT_FAILED, UNKNOWN}
+
+<nodeId>.command_handle <= {COMMAND_ACCEPTED, COMMAND_SUCCESS, COMMAND_RCVD_BY_SYSTEM, COMMAND_SENT_TO_SYSTEM, COMMAND_FAILED, COMMAND_DENIED, UNKNOWN}
+\end{lstlisting}
+\end{minipage}
+\caption{Posibles estados de los nodos}
+\label{fig:estados}
+\end{center}
+\end{figure}
+
+
+\section{Mundo exterior} \label{sec:mundoexterior}
+
+PLEXIL puede comprobar el estado del mundo exterior mediante operaciones de búsqueda o \textit{lookups}. Esta operación complementa a las ya vistas que permiten interactuar modificando el mundo exterior (comandos). Los \textit{lookups} permiten comprobar el estado del mundo de una forma rápida y sencilla, con una particularidad: sólo pueden utilizarse en las condiciones que rigen el control de ejecución de los nodos. Esto será muy útil para poder indicar que ciertos nodos se ejecuten ante un evento particular del mundo exterior o, por el contrario, detengan su ejecución.
+
+La lectura de los estados del mundo exterior se realizará mediante el uso de un \textit{lookup} sobre el nombre de un dominio especifico para el cual tendremos un control de bajo nivel que devuelva el dato asociado al estado. Por tanto, de forma general, un \textit{lookup} estará asociado al control de un sensor del sistema a controlar. Habrá que distinguir entre dos tipos de \textit{lookups}:
+
+\begin{itemize}
+	\item \textbf{Comprobación inmediata}: permite conocer el valor del estado de forma inmediata. Para ello, se usa una clausula del tipo \texttt{LookupNow (<nombre\_estado>)}. Ésta sólo podrá aparecer en las \textit{check conditions} (precondición, postcondición o condición invariable) o en el cuerpo de los nodos de comando. Es muy útil para comprobar antes, durante y después que una acción se lleve a cabo en ciertas condiciones de seguridad.
+	\item \textbf{Comprobación por cambio}: esta comprobación esta basada en eventos y retorna el valor inicial del estado, y, tras ello, los siguientes valores según se vayan produciendo cambios en el estado. Se emplea la clausula \texttt{LookupOnChange (<nombre\_estado>, [<tolerancia>])} para indicar el estado sobre el cual se quiere realizar un seguimiento. En dicha clausula se deberá indicar el nombre del estado, y, opcionalmente, la tolerancia (debe ser un valor entero o real, si no se especifica toma 0 por defecto). La tolerancia indicará el valor mínimo de cambio que se debe dar en el estado para que se devuelva el nuevo estado. Este tipo de consulta sólo puede aparecer en las \textit{gate conditions} (condición de inicio, final, repetición u omisión). Por tanto, permite controlar cuando un nodo puede ejecutarse o finalizar la ejecución en base al estado del mundo.
+\end{itemize}
+
+A todos los efectos un \textit{lookup} es una función (con al menos un parámetro de tipo cadena de caracteres para el nombre del estado) que devolverá un valor de un tipo simple que podremos almacenar (sólo en el caso de \texttt{LookupNow} en un nodo de comando), o utilizar en expresiones booleanas para controlar las condiciones de ejecución del nodo. Su uso es necesario ya que, al contrario que las llamadas a funciones que sólo pueden aparecer en el cuerpo de un nodo de llamada a función, su uso fundamental está en las condiciones de los nodos. En la figura \ref{fig:ejcond} puede verse un ejemplo del uso de \textit{lookups}.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+bajarTemperatura:
+{
+	StartCondition: LookupOnChange("Temperatura") > 90;
+	PreCondtion: LookupNow("VentiladorOperativo");
+	EndCondition: LookupOnChange("Temperatura",5) < 60;
+	PostCondition: LookupNow("Temperatura") < 90;
+	RepeatCondition: true;
+	Command: activarVentilador(1);
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Ejemplo del uso de \textit{lookups}}
+\label{fig:ejcond}
+\end{center}
+\end{figure}
+
+
+\subsection{Control del tiempo}
+
+PLEXIL no dispone de un concepto nativo del tiempo, sin embargo, se puede trabajar con el como un estado del mundo. Dicho estado está predefinido con el nombre de \texttt{time} y permite operar con él ya que se trata de un valor real.
+
+
+\section{Gestión de recursos}\label{sec:recursos}
+
+PLEXIL soporta la utilización y gestión de recursos dentro del plan. Actualmente, esto es sólo aplicable a los nodos de comando, ya que serán estos los que realicen cambios en el sistema, y, por tanto, serán potencialmente consumidores de recursos. El uso de recursos será comprobado en tiempo de ejecución por medio de una entidad desarrollada a tal fin: el arbitrador de recursos. 
+
+Los recursos son entidades limitadas que puntualmente pueden ser recurridas para realizar ciertas acciones que requieran de su uso o consumo. PLEXIL soportará recursos unarios, no unarios, jerárquicos y recursos renovables. En todos los casos, los recursos pueden ser o no consumibles, y reutilizables en función de las necesidades.
+
+Como ya se ha indicado, los recursos sólo podrán ser especificados para su uso en los nodos de comando. Para crear un recurso, sólo es necesario indicar el uso que se le va a dar en un nodo de comando y el sistema se encargará de gestionar la instancia del recurso y todas las apariciones del mismo para controlar su uso. Además, dentro de un mismo nodo, se podrán utilizar tantos recursos como sea necesario para ejecutar el comando. En la figura \ref{fig:recursos} pueden verse los elementos necesarios para el uso de recursos, así como un ejemplo del uso de los mismos. A continuación se detalla cada elemento del uso de recursos:
+
+\begin{itemize}
+	\item \texttt{ResourcePriority}: indica la prioridad en el uso del recurso que va inmediatamente después. Sólo puede haber una indicación de prioridad en cada nodo, independientemente del número de recursos implicados. La prioridad vendrá indicada por un valor entero sin signo, siendo más prioritario el número de menor valor.
+	\item \texttt{Resource}: especifica las características del recurso a emplear. Consta de los siguientes elementos:
+	\begin{itemize}
+		\item \texttt{Name}: indica el nombre (mediante una cadena de texto) que identifica al recurso necesario. Es el único elemento obligatorio al declarar un recurso. 
+		\item \texttt{LowerBound}: para recursos no unarios, permite definir el valor mínimo que será requerido del recurso para la realización del comando. Será representado por un valor real.
+		\item \texttt{UpperBound}: define el máximo de un recurso que podrá consumir el nodo para ejecutar el comando. Está representado por un valor real. En caso de que deseemos consumir una cantidad fija y no definir un rango, tanto \texttt{LowerBound} como \texttt{UpperBound} deberán tener el mismo valor. Si, además, ese valor es de signo negativo en ambos, significará que es un recurso renovable y se generará la cantidad indicada en valor absoluto de dicho recurso.
+		\item \texttt{ReleaseAtTermination}: este valor booleano indica si el recurso volverá a estar disponible tras la ejecución del nodo en el cual se hace uso de él. Por defecto, el recurso es desbloqueado permitiendo así su uso por otros nodos, si esta propiedad se especifica a falso, se tratará de un recurso consumible que una vez usado no pueda ser utilizado por otros nodos.
+	\end{itemize}
+\end{itemize}
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+ResourcePriority:
+  (obligatorio: tipo = int, mayor prioridad al menor valor);
+Resource:
+  Name = (obligatorio: tipo = string),
+  LowerBound = (opcional: tipo=real, defecto=0.0),
+  UpperBound = (opcional: tipo=real, defecto=0.0),
+  ReleaseAtTermination = (opcional: tipo=bool, defecto=true);
+
+ejemploRecursos:
+{
+	Real maximo = 20.0;
+	ResourcePriority: 10;
+	Resource: Name = "brazo_der";
+	Resource: Name = "brazo_izq";
+	Resource: Name = "memoria",
+	 LowerBound = 10.0,
+	 UpperBound = maximo,
+	 ReleaseAtTermination = false;
+	Command: comando();
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Utilización de recursos y ejemplo}
+\label{fig:recursos}
+\end{center}
+\end{figure}
+
+Al declarar los recursos necesarios por un nodo, se declarará la prioridad del nodo para el uso de recursos, y, después, una lista de los recursos a usar mediante la declaración sucesiva de etiquetas \texttt{Resource} con los elementos internos necesarios que deseemos. La lista de elementos internos del recurso irá separada por comas, salvo el último elemento, que acabará con ';' como indicador de final de instrucción.
+
+Los valores para los elementos de los recursos son parametrizables. Por tanto, podremos declarar variables de cadenas de caracteres para reemplazar el literal que especifica el nombre, utilizar valores reales como límites en el uso de recursos (lo que permite un uso dinámico en tiempo de ejecución), o una variable booleana para indicar si el recurso es renovable o no.
+
+
+\subsection{Arbitrador de recursos}
+
+Todos los comandos identificados en el ciclo de ejecución en curso (aquellos nodos que pueden ser ejecutados en ese instante), serán enviados al arbitrador de recursos en vez de ir directamente al subsistema encargado de su ejecución. El arbitrador será el encargado de analizar el uso de los recursos que hace el grupo de los nodos de comando recibido, de tal forma que si se dan las condiciones necesarias en el uso de recursos, éste entregará los comandos al subsistema encargado de su ejecución, indicando dicha circunstancia al manejador del comando. En caso de haber un conflicto de recursos, los nodos que no puedan ser ejecutados, recibirán un indicador en el manejador de comandos (véase la siguiente sección) para indicar que la ejecución del comando ha sido denegada.
+
+El arbitrador de recursos se verá más en profundidad en el capítulo \ref{cap:ue}, ya que éste forma parte del ejecutor \textit{Universal Executive}.
+
+
+\subsection{Manejador de comando}\label{sec:mcom}
+
+Como ya se indicó, cada comando (y por tanto, cada nodo de comando) tiene asociado un manejador de comando. El manejador de comando a efectos prácticos es simplemente un valor de estado accesible por el nodo y sus parientes cercanos. Este estado será establecido inmediatamente por el arbitrador de recursos cuando el comando sea puesto en ejecución. Es importante que al iniciar la ejecución del comando se establezca un valor particular para el manejador asociado, ya que eso es el comienzo de la etapa de ejecución del comando. 
+
+Al solicitar la ejecución de un comando pueden suceder varias cosas: que el arbitrador rechace el comando, o que éste sea aceptado y se envié al subsistema de ejecución del comando. Una vez ejecutado, se asignará un nuevo valor al manejador que indique como fue el resultado de la ejecución del comando. Por tanto, en todo momento se podrá conocer el estado del comando y, en base a eso, puede controlarse la ejecución de otros nodos. Cuando un nodo de comando está listo para su ejecución, el manejador del comando asociado podrá recibir uno o más de los siguientes valores:
+
+\begin{itemize}
+	\item COMMAND\_ACCEPTED: el arbitrador de recursos (en caso de que el comando requiera recursos) ha comprobado que es posible la ejecución del comando y éste va a ser enviado al subsistema para su ejecución.
+	\item COMMAND\_DENIED: el comando no puede ejecutarse debido a que el arbitrador ha comprobado que los recursos necesarios no están disponibles.
+	\item COMMAND\_SENT\_TO\_SYSTEM: el comando ha sido enviado al subsistema externo para su ejecución.
+	\item COMMAND\_RCVD\_BY\_SYSTEM: el sistema externo ha recibido el comando.
+	\item COMMAND\_SUCCESS: el comando ha sido ejecutado correctamente.
+	\item COMMAND\_FAILED: la ejecución del comando ha sido incorrecta.
+	\item UNKNOWN: en caso de que el comando se esté ejecutando.
+	\item COMMAND\_ABORTED: abortado por el ejecutor cuando la condición invariante falle.
+	\item COMMAND\_ABORT\_FAILED: fallo al abortar la ejecución del nodo tras evaluar negativamente la condición invariante.
+\end{itemize}
+
+Los nodos de comando tienen una condición de finalización predefinida que se comporta de la forma que se muestra en la figura \ref{fig:fincom} en función de si el usuario ha definido o no una condición de finalización particular para el nodo.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+if <existe EndCondition definida por el usuario>
+	COMMAND_DENIED or (COMMAND_ACCEPTED and <EndCondition>)
+else
+	COMMAND_DENIED or COMMAND_ACCEPTED
+\end{lstlisting}
+\end{minipage}
+\caption{Condición de finalización de un nodo de comando}
+\label{fig:fincom}
+\end{center}
+\end{figure}
+
+\section{Comentarios}
+
+Los comentarios en Plexil pueden ser para una línea o para un bloque como se muestra en la figura \ref{fig:com}.
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+// Comentario de una línea
+/* 
+ Comentario de un bloque
+ Texto comentado
+*/
+
+Comment "Comentario de una linea o bloque, delimitado por dobles comillas";
+\end{lstlisting}
+\end{minipage}
+\caption{Comentarios en Plexil}
+\label{fig:com}
+\end{center}
+\end{figure}
+
+\section{PlexilScript}
+
+PLEXIL está preparado para interactuar con un sistema de bajo nivel que opere sobre el mundo y devuelva resultados a través del ejecutor para que este actualice los datos del plan. Dado que esto implica un sistema complejo y los planes pueden contener errores que deben ser depurados antes de integrarlos a un sistema complejo, PLEXIL dispone de un lenguaje de scripts de simulación compresible por el \textit{Universal Executive}, que, al igual que el lenguaje PLEXIL, pueden escribirse en Plexil (PLEXIL estándar) o PlexilLisp, pero finalmente se codificarán en XML para ser leídos por el ejecutor. La traducción entre la sintaxis que se verá aquí (Plexil estándar) y XML se verá en la siguiente sección.
+
+Los scripts deberán ser capaces de responder como lo haría el subsistema de control de bajo nivel. Por tanto, deberá ser capaz de responder a \textit{lookups} y comandos. Además, si el tiempo es importante, y dado que el tiempo se gestiona como un estado del mundo, los scripts también podrán controlar el paso del tiempo.
+
+Un script de simulación de PLEXIL se compondrá de dos bloques, pudiendo estar vacíos en función de las necesidades de la simulación. Estos bloques serán los siguientes:
+\begin{itemize}
+	\item \textbf{Estado inicial}: el estado inicial del mundo describe los valores iniciales de los estados. No siempre será necesario iniciar los estados, ya que un estado no inicializado tendrá un valor UNKNOWN.
+	\item \textbf{Variaciones del mundo}: aquí se describirá linealmente como progresa el mundo. En este punto se podrán realizar cambios en los valores de los estados y las respuestas dadas por los comandos, así como el estado que debe recibir el manejador de estados de los mismos. Los \textit{lookups} recibirán el último valor escrito para el estado solicitado, por tanto, si se desea gestionar el tiempo, sólo será necesario ir actualizando el valor del estado predefinido \texttt{time} con el valor deseado, siempre de forma progresiva.
+\end{itemize}
+
+Un script de Plexil tendrá la forma mostrada en la figura \ref{fig:ejscript}. Los dos elementos descritos anteriormente se describen mediante las clausulas \texttt{initial-state} y \texttt{script} para el estado inicial y la variación del mundo, respectivamente.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+initial-state {
+	state Posición("Destino" : string) = false : bool;
+	state time() = 0 : real;
+}
+script {
+	state time() = 8 : real;
+	state Posición ("Destino" : string) = true : bool;
+	command-success avanzar (1.0 : real);
+	state time() = 9 : real;
+	command-accepted tomarMuestra ();
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Ejemplo de script de simulación de Plexil}
+\label{fig:ejscript}
+\end{center}
+\end{figure}
+
+A continuación se describirá la sintaxis de los elementos que pueden aparecer. Primero se verá la modificación de los estados, los cuales pueden aparecer tanto en el estado inicial como en el script. Después se verán los elementos que sólo pueden formar parte del script que son respuestas a comandos. Hay que destacar que los nombres de los tipos no tienen capitalización (al contrario que en Plexil) y que el nombre de los tipos \texttt{Boolean} e \texttt{Integer} se sustituyen por \texttt{bool} e \texttt{int} respectivamente.
+
+\begin{itemize}
+	\item \textbf{Modificación de los estados}: la clausula que permite tanto definir un estado inicial, como variar los mismos durante el script de simulación es la mostrada en la figura \ref{fig:modest}. Tras la etiqueta \texttt{state} deberá indicarse el nombre del estado a modificar, así como la lista de parámetros que identifican los datos del estado a comprobar. Ésta será una lista de pares valor-tipo separada por comas, pudiendo estar vacía si no se precisan parámetros. Finalmente se indicará el valor de retorno de la consulta de estado y su tipo. Cada vez que se realice una consulta a un estado, se devolverá el último estado actualizado.
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+state <estado> ([<parámetro> : <tipo_param>]*) = <resultado> : <tipo_res>;
+\end{lstlisting}
+\end{minipage}
+\caption{Modificación de los estados en Plexilscript}
+\label{fig:modest}
+\end{center}
+\end{figure}
+	
+%	\item \textbf{Llamadas a función}: en los scripts las llamadas a funciones se asemejan hasta tal punto a la modificación de los estados, que la clausula que permite generar un retorno a una función es igual a la modificación de un estado salvo por la etiqueta inicial, que será \texttt{function-call}. La clausula completa puede verse en la figura \ref{fig:retfun}
+%\begin{figure}[!h]
+%\begin{center}
+%\begin{minipage}{12cm}
+%\lstset{language=c++, breaklines=true, tabsize=3}
+%\lstset{commentstyle=\textit}
+%\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+%\begin{lstlisting}[frame=trbl]{}
+%function-call <función> ([<parámetro> : <tipo>]*) =
+%	<resultado> : <tipo_res>;
+%\end{lstlisting}
+%\end{minipage}
+%\caption{Retorno de una llamada a función en Plexilscript}
+%\label{fig:retfun}
+%\end{center}
+%\end{figure}
+	
+	\item \textbf{Comandos}: la definición de los comandos se divide en dos tipos de clausulas. La primera permite responder a un comando con un valor de retorno, y, la segunda ofrece la posibilidad de establecer el valor para el manejador del comando. Ambas clausulas tendrán la misma sintaxis que la modificación de estados, salvo por la etiqueta empleada y que el segundo grupo no permite generar un valor de retorno al ser sólo un modificador del estado del manejador. Las etiquetas y las clausulas completas para cada grupo de respuesta a comando pueden verse en la figura \ref{fig:scriptcom}. Para el segundo grupo, las etiquetas corresponden a los posibles estados del manejador de comandos vistos en la sección \ref{sec:mcom}.
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+{command, command-abort, command-ack} <comando> ([<parámetro> : <tipo>]*) = <valor> : <tipo>;
+
+{command-accepted, command-denied, command-sent-to-system, command-rcvd-by-system, command-success, command-failed} <comando> ([<parámetro> : <tipo>]*);
+\end{lstlisting}
+\end{minipage}
+\caption{Retorno a un comando y al manejador asociado en Plexilscript}
+\label{fig:scriptcom}
+\end{center}
+\end{figure}
+
+\end{itemize}
+
+Para los comandos se deberán especificar correctamente los parámetros con el mismo valor que sus respectivas llamadas en el plan, ya que en caso de no coincidir la lista de parámetros indicada en el script con la lista utilizada al realizar el comando, se provocará un fallo en tiempo de ejecución al enviar una respuesta a un comando que no ha sido lanzado desde el plan. En todo caso (incluyendo la modificación de los estados), los valores de retorno deberán ser un tipo simple de los admitidos por Plexil.
+
+La sintaxis completa para la codificación de scripts en Plexil se puede ver en la figura \ref{fig:scriptfull}
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+elemento =
+    script        { <elemento> ... }
+  | initial-state { <elemento> ... }
+  | simultaneous  { <elemento> ... }
+  | update-ack    <nombre> ;
+  | state		   <nombre> (<valor> : <tipo>, ...) = <valor> : <tipo> ;
+  | command       <nombre> (<valor> : <tipo>, ...) = <valor> : <tipo> ;
+  | command-abort <nombre> (<valor> : <tipo>, ...) = <valor> : <tipo> ;
+  | command-ack   <nombre> (<valor> : <tipo>, ...) = <valor> : <tipo> ;
+  | command-accepted       <nombre> (<valor> : <tipo>, ...);
+  | command-denied         <nombre> (<valor> : <tipo>, ...);
+  | command-sent-to-system <nombre> (<valor> : <tipo>, ...);
+  | command-rcvd-by-system <nombre> (<valor> : <tipo>, ...);
+  | command-success        <nombre> (<valor> : <tipo>, ...);
+  | command-failed         <nombre> (<valor> : <tipo>, ...);
+tipo = bool | int | real | string
+     | bool-array | int-array | real-array | string-array
+\end{lstlisting}
+\end{minipage}
+\caption{Sintaxis completa para los scripts de Plexil}
+\label{fig:scriptfull}
+\end{center}
+\end{figure}
+%  | function-call <nombre> (<valor> : <tipo>, ...) = <valor> : <tipo> ;
+
+
+\section{Ejecución de los programas de PLEXIL}
+
+Los programas escritos en Plexil (PLEXIL estándar), tendrán por defecto la extensión \texttt{.ple}. Dichos ficheros tendrán la sintaxis desarrollada a lo largo de este capítulo, sin embargo, el formato ``comprensible'' de PLEXIL para su ejecución es un fichero XML. Dicho fichero XML, cuya extensión será \texttt{.plx}, es el que utilizará el UE para ejecutar el plan. Para la obtención de dicho fichero se recurre a un programa que comprueba la corrección del fichero original y genera un nuevo fichero (con el nombre original sustituyendo la extensión) de PLEXIL en XML con el plan traducido a dicho formato. Para la traducción a XML de los planes de Plexil, se recurre a un \texttt{shell-script} que invocará al componente encargado de la traducción. La orden que se deberá ejecutar es la mostrada en la figura \ref{fig:Plexil}. En la figura también se muestra el resultado de la traducción. En caso de que el archivo contenga errores, se mostrará una lista indicando la relación de los mismos.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+$ plexilc archivo.ple
+PlexilParser version 0.4
+
+Translating:
+  archivo.ple
+Writing Core PLEXIL to archivo.plx
+Done.
+$
+\end{lstlisting}
+\end{minipage}
+\caption{Traducción de Plexil a XML}
+\label{fig:Plexil}
+\end{center}
+\end{figure} 
+
+El script permite varias opciones que pueden verse escribiendo \texttt{plexilc} sin argumentos. La más útil de ellas es la opción \texttt{-o} seguida de un nombre de archivo. Dicha opción permite escribir el archivo XML en el archivo indicado en sustitución del comportamiento genérico.
+
+Al igual que los planes, los scripts de simulación deberán ser traducidos a XML. El procedimiento es el mismo que para los archivos de planes. La orden a ejecutar y la salida generada se muestran en la figura \ref{fig:Plexilscript}. En este caso, sólo mostrará una salida si hay errores, no dando ninguna información en caso de que la traducción sea correcta.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+$ plexilc archivo-script.pst
+\end{lstlisting}
+\end{minipage}
+\caption{Traducción de los scripts de Plexil a XML}
+\label{fig:Plexilscript}
+\end{center}
+\end{figure}
+
+Los archivos de Plexilscript tendrán extensión \texttt{.pst}\footnote{Anteriormente compartian la extensión \texttt{.ple}, pero en las últimas versiones es necesario reemplazar dicha extensión para poder realizar correctamente la traducción a XML.} y, tras su traducción a XML, ésta pasará a \texttt{.plx}. Para el nombrado de los archivos de scripts se recurre a una convención mediante la cual el nombre del archivo será el nombre del fichero del plan (sin extensión), seguido por \texttt{-script} o \texttt{\_script} y la extensión del archivo en base a su formato. Dicha convención permite que el propio ejecutor localice el script correspondiente al plan a ejecutar siempre que se encuentren en la misma carpeta, evitando así tener que indicar dicho fichero como parámetro.
+
+Una vez se disponga de un plan PLEXIL en formato XML y su respectivo script de simulación (si es necesario), se podrá realizar la ejecución mediante el UE. La descripción del UE viene dada a lo largo del capítulo \ref{cap:ue}. Si se desea conocer únicamente los detalles necesarios para la ejecución de simulaciones, consulte la sección \ref{sec:run-ue} de dicho capítulo.

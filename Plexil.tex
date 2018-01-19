@@ -1,0 +1,147 @@
+\documentclass[spanish,11pt,a4paper,twoside]{book}
+
+\usepackage[spanish]{babel}
+\usepackage[latin1]{inputenc}
+%\usepackage[utf8x]{inputenc}
+\usepackage{graphicx}
+\graphicspath{{./img/}}  
+  
+\usepackage{verbatim}
+\usepackage{amsmath}
+\usepackage{eurosym}
+\usepackage{makeidx}
+\usepackage{listings}
+\usepackage{array}
+\usepackage{cite}
+
+\newcommand{\bigrule}{\titlerule[0.7mm]}
+\renewcommand{\tablename}{Tabla}
+\renewcommand{\listtablename}{Índice de tablas}
+\addto{\captionsspanish}{
+  \renewcommand{\bibname}{Referencias} }
+\setcounter{secnumdepth}{4}
+\setcounter{tocdepth}{4}
+
+\voffset=-2cm
+\hoffset=1cm
+\textheight=25cm
+\textwidth=14cm
+\oddsidemargin=0pt
+\evensidemargin=0pt
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\renewcommand{\chaptermark}[1]{\markboth{#1}{}}
+\renewcommand{\sectionmark}[1]{\markright{\thesection. #1}}
+\lhead[\fancyplain{}{\bfseries\thepage}]{\fancyplain{}{\bfseries\rightmark}}
+\rhead[\fancyplain{}{\bfseries\leftmark}]{\fancyplain{}{\bfseries\thepage}}
+\cfoot{}
+
+\usepackage{titlesec}
+
+% Propiedades figuras de codigo
+\usepackage{color}
+\definecolor{gray97}{gray}{.97}
+\definecolor{gray75}{gray}{.75}
+\definecolor{gray45}{gray}{.45}
+
+\usepackage{listings}
+\lstset{ frame=Ltb, framerule=0pt, aboveskip=0.5cm, framextopmargin=3pt, framexbottommargin=0pt, framexleftmargin=0.2cm, framesep=0pt, rulesep=.4pt, backgroundcolor=\color{gray97}, rulesepcolor=\color{black},
+%
+stringstyle=\ttfamily,
+showstringspaces = false,
+basicstyle=\small\ttfamily,
+commentstyle=\color{gray45},
+keywordstyle=\bfseries,
+%
+numbers=left,
+numbersep=15pt,
+numberstyle=\tiny,
+numberfirstline = false,
+breaklines=true,
+}
+
+
+\titleformat{\chapter}[display]
+{\bfseries\Huge}
+{\LARGE\chaptertitlename\
+ \LARGE\thechapter}
+{7mm}{}
+[\vspace{0.5mm} \bigrule \vspace{0.5mm}]
+
+%Propiedades del archivo PDF
+\usepackage{hyperref}
+\hypersetup{
+  pdftitle={Primeros pasos con PLEXIL y el Universal Executive},
+  pdfsubject={Guía},
+  pdfauthor={Pablo Muñoz Martínez},
+  pdfkeywords={Autonomous agents, intelligent system, planning and scheduling, intelligent execution, robotics},
+}
+
+\author{Pablo Muñoz Martí­nez}
+\title{Plexil}
+\makeindex
+
+%-------------------------------------------------------
+%PORTADA
+\begin{document}
+\thispagestyle{empty}
+
+\begin{center}
+\vspace*{4cm}
+\begin{LARGE}\textbf{Primeros pasos con\\ \vspace{0.5cm}PLEXIL and the Universal Executive}\end{LARGE}
+\rule{14cm}{1mm}
+\end{center}
+\vfill
+\begin{flushright}
+  \textbf{Pablo Muñoz Martí­nez}\\
+  \textbf{Juan Alejandro Mora Prieto}\\
+  \textit{Departamento de Automática\\Universidad de Alcalá}\\
+\end{flushright}
+\newpage
+
+%-------------------------------------------------------
+%ACTUALIZACIN Y LICENCIA
+\thispagestyle{empty}
+\begin{flushright}
+\textit{Primeros pasos con PLEXIL and the Universal Executive}\\
+\textit{Última actualización:} 9 de Diciembre de 2013.\\
+\end{flushright}
+\vfill
+\noindent Esta obra se distribuye bajo la licencia \textit{Creative Commons} de reconocimiento no comercial (versión 3.0), con los siguientes términos:
+\begin{figure}[h]
+%\includegraphics[width=1.1\textwidth]{licenciacc}
+\include{./cap/cc}
+\end{figure}
+
+\noindent Puede consultar la licencia completa en: \\
+\texttt{http://creativecommons.org/licenses/by-nc/3.0/es/legalcode.es}\\
+\newline
+\newline
+Si ha encontrado algún error en el documento o desea contactar con el autor, puede hacerlo a través de la siguiente dirección de email: \texttt{pmunoz@aut.uah.es}. Todos los comentarios serán bien recibidos.
+\newpage
+
+%--------------------------------------
+
+%INDICES Y TABLAS
+\setcounter{page}{1}
+\pagenumbering{arabic}
+\tableofcontents
+\listoffigures
+%\listoftables
+
+%COMIENZO DEL DOCUMENTO
+\include{./cap/introduccion}
+\include{./cap/plexil}
+\include{./cap/ue}
+
+%APENDICES
+\appendix
+\cleardoublepage
+\include{./cap/aptransiciones}
+
+%BIBLIOGRAFIA
+\bibliographystyle{IEEEtran}
+\bibliography{IEEEabrv,./cap/referencias}
+
+\end{document}

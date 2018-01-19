@@ -1,0 +1,829 @@
+\chapter{El \textit{Universal Executive}}\label{cap:ue}
+
+En este capítulo veremos el sistema encargado de ejecutar los planes escritos en PLEXIL, el UE. Para ello se verá el framework que implementa los elementos necesarios para desarrollar nuestro propio sistema de control y se dará una descripción más completa del arbitrador de recursos, ya que es un elemento fundamental del UE. Además, se verá la aplicación TestExec, que permitirá realizar simulaciones de planes mediante el uso de scripts de PlexilScript.
+
+
+\section{\textit{Universal Executive} y TestExec}
+
+El \textit{Universal Executive} (UE) es un sistema que interpreta y ejecuta los planes escritos en PLEXIL. Técnicamente el UE es una librería que implementa PLEXIL. Por tanto, para implementar el sistema de control mediante el UE, tendremos que disponer de un soporte de bajo nivel adecuado a nuestro hardware para ejecutar los comandos necesarios, el cual se comunicará a través de una interfaz definida con el framework del UE. En esencia, el UE es un framework que nos permitirá cargar y ejecutar planes de PLEXIL dentro de nuestro propio programa de control y que éste se comunique con el soporte de bajo nivel a través de una interfaz definida en dicho framework. En la figura \ref{fig:appframew} pueden verse gráficamente los elementos básicos necesarios para diseñar un sistema de control mediante PLEXIL y el UE. El funcionamiento del framework se verá en la sección \ref{sec:ueframew}.
+
+\begin{figure}[h]
+\begin{center}
+ \includegraphics[width=7.5cm]{framework}
+ \caption{Esquema de un sistema controlado por PLEXIL y el UE}
+ \label{fig:appframew}
+\end{center}
+\end{figure}
+
+A parte de dicho framework, junto a la distribución de PLEXIL se distribuye una aplicación denominada TestExec que implementa el framework del UE. Dicha aplicación permite probar los planes escritos en PLEXIL (con formato XML) y simular el comportamiento del mundo exterior a través de un script PlexilScript. La función de esta aplicación es permitir comprobar el funcionamiento del plan desarrollado para cualquier situación, dado que en el script podemos indicar todas las posibles contingencias que pudieran darse durante la ejecución en el sistema real. Además, permitirá realizar las pruebas sin necesidad de tener que diseñar ni compilar el framework, por lo que es muy útil para el aprendizaje del lenguaje PLEXIL. En la figura \ref{fig:appte} puede verse un esquema de la aplicación TestExec.
+
+\begin{figure}[h]
+\begin{center}
+ \includegraphics[width=9cm]{TestExec}
+ \caption{Esquema de la aplicación TestExec}
+ \label{fig:appte}
+\end{center}
+\end{figure}
+
+
+\section{Ejecución de TestExec}\label{sec:run-ue}
+
+Para llevar a cabo la ejecución de TestExec se utiliza la sintaxis mostrada en la figura \ref{fig:run-ue}. 
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+run-ue [-s] [-d archivo-debug] plan.plx [plan-script.plx] 
+	[-l libreria.plx]*
+\end{lstlisting}
+\end{minipage}
+\caption{Ejecución de TestExec vía script}
+\label{fig:run-ue}
+\end{center}
+\end{figure}
+
+La opción \texttt{-s} omite la información de los archivos usados mostrada al inicio de la ejecución. Con la opción \texttt{-d} se puede especificar el archivo de depuración que se deberá utilizar. Dicho archivo permite indicar al ejecutor que información debe mostrar a través del terminal, como la transición entre estados de los nodos, estados de salida, información de los manejadores de comandos, etc. Si no se especifica ningún archivo, por defecto utilizará \texttt{Debug.cfg} y, en caso de no existir, no mostrará información durante la ejecución. El contenido de estos archivos se verá en la sección \ref{sec:fdebug}.
+
+Tras las primeras opciones, se deberá indicar que plan deseamos ejecutar. Se deberá indicar el archivo con el plan PLEXIL en formato XML (cuya extensión por defecto es \texttt{.plx}). Inmediatamente después del plan se deberá especificar el archivo de script (también en XML) para realizar la simulación. En caso de no indicarlo, buscará en el directorio de trabajo un archivo de script cuyo nombre sea el nombre del plan seguido por \texttt{-script} o \texttt{\_script} para usarlo, si no encontrará ninguno, utilizaría un script genérico de nombre \texttt{empty-script.plx}, el cual es un script vacío. En caso de que nuestro plan contenga llamadas a funciones, comandos o consulta de estados, no se podrá utilizar el script vacío y la ejecución de dicho plan sin su script correspondiente generará un error de ejecución. Finalmente se deberá indicar la lista de librerías que se utilizarán en nuestro plan (sólo si se usan nodos de llamada a librería). Está lista será una sucesión formada por el par \texttt{-l} seguido del nombre de archivo librería en XML (con extensión \texttt{.plx}).
+
+Este método de ejecución permite ejecutar TestExec a través de un \texttt{shell-script}. En la figura \ref{fig:runtestexec} se muestra el comando necesario para ejecutar TestExec. La sintaxis será la misma que para el caso anterior.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+test-exec_g_rt [-d archivo-debug] -p plan.plx 
+	-s plan-script.plx [-l libreria.plx]*
+\end{lstlisting}
+\end{minipage}
+\caption{Ejecución de TestExec}
+\label{fig:runtestexec}
+\end{center}
+\end{figure}
+
+En la figura \ref{fig:uerunej} se muestra un ejemplo de ejecución (no se muestra la salida completa). El archivo de depuración utilizado está en la figura \ref{fig:fdebugej1}.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{13cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\scriptsize}
+\begin{lstlisting}[frame=trbl]{}
+/home/user/test$ run-ue -p lista.plx -l lib.plx -l raiz.plx
+Running UE from /home/user/plexil
+  Plan:      lista.plx
+  Script:    /home/user/plexil/apps/TestExec/scripts/empty-script.plx
+  Libraries: -l lib.plx -l raiz.plx
+
+[Node:transition]Transitioning 'root' from INACTIVE to WAITING
+[Node:transition]Transitioning 'root' from WAITING to EXECUTING
+[Node:transition]Transitioning 'LeerX' from INACTIVE to WAITING
+[Node:transition]Transitioning 'Accion' from INACTIVE to WAITING
+[Node:transition]Transitioning 'comprobarEjecucionLib' from INACTIVE to WAITING
+[Node:transition]Transitioning 'InformarCorrecto' from INACTIVE to WAITING
+[Node:transition]Transitioning 'InformarFallo' from INACTIVE to WAITING
+[Node:transition]Transitioning 'comprobarEjecucionLib' from WAITING to EXECUTING
+[Node:transition]Transitioning 'LeerX' from WAITING to EXECUTING
+[Node:transition]Transitioning 'multiplicar' from INACTIVE to WAITING
+[Node:transition]Transitioning 'calcularRaiz' from INACTIVE to WAITING
+[Node:transition]Transitioning 'LeerX' from EXECUTING to ITERATION_ENDED
+[Node:transition]Transitioning 'LeerX' from ITERATION_ENDED to FINISHED
+[Node:outcome]Outcome of 'LeerX' is SUCCESS
+	[...]
+[Node:transition]Transitioning 'lib' from EXECUTING to FINISHING
+[Node:transition]Transitioning 'lib' from FINISHING to ITERATION_ENDED
+[Node:transition]Transitioning 'lib' from ITERATION_ENDED to FINISHED
+[Node:outcome]Outcome of 'lib' is SUCCESS
+[Node:transition]Transitioning 'Accion' from FINISHING to ITERATION_ENDED
+[Node:transition]Transitioning 'InformarCorrecto' from WAITING to EXECUTING
+[Node:transition]Transitioning 'InformarFallo' from WAITING to FINISHED
+[Node:outcome]Outcome of 'InformarFallo' is SKIPPED
+[Node:transition]Transitioning 'Accion' from ITERATION_ENDED to FINISHED
+[Node:outcome]Outcome of 'Accion' is SUCCESS
+[Node:transition]Transitioning 'InformarCorrecto' from EXECUTING to ITERATION_ENDED
+[Node:transition]Transitioning 'InformarCorrecto' from ITERATION_ENDED to FINISHED
+[Node:outcome]Outcome of 'InformarCorrecto' is SUCCESS
+[Node:transition]Transitioning 'root' from EXECUTING to FINISHING
+[Node:transition]Transitioning 'root' from FINISHING to ITERATION_ENDED
+[Node:transition]Transitioning 'root' from ITERATION_ENDED to FINISHED
+[Node:outcome]Outcome of 'root' is SUCCESS
+/home/user/test$ 
+\end{lstlisting}
+\end{minipage}
+\caption{Ejemplo de la salida generada por TestExec}
+\label{fig:uerunej}
+\end{center}
+\end{figure}
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+# Archivo Debug.cfg
+:Node:transition
+:Node:outcome
+\end{lstlisting}
+\end{minipage}
+\caption{Archivo de depuración utilizado en la figura \ref{fig:uerunej}}
+\label{fig:fdebugej1}
+\end{center}
+\end{figure}
+
+
+\subsection{Archivos de depuración (\textit{debug})}\label{sec:fdebug}
+
+Como se ha indicado anteriormente, para que el ejecutor muestre información de interés por el terminal (ya sea simulando el plan con TestExec o en un sistema real), se requiere un archivo de depuración. En el caso de TestExec, dicho archivo deberá estar en la carpeta donde estemos ejecutando la aplicación, y, por defecto, tendrá como nombre \texttt{Debug.cfg}, pudiendo indicar otro archivo mediante la opción \texttt{-d}.
+
+Un archivo de depuración es un fichero de texto compuesto por líneas. Una línea puede ser un comentario si comienza con el carácter '\#'. Para definir los datos que queremos que muestre el ejecutor, deberemos especificar una línea que comience por ':' seguida de una etiqueta. Esta etiqueta consistirá en una cadena de caracteres sin espacios que indicará el tipo de información a mostrar. Generalmente las etiquetas consisten en un par de identificadores separados por ':'. El primero indicará el origen de la información (nodos, procesos del ejecutor, información del manejador de comandos, etc), y el segundo la información en particular. Con ello podremos obtener información del estado de salida de los nodos, la inclusión de un nodo librería en el plan en ejecución, los comandos aceptados para ejecución y mucho más. El archivo de depuración básico es el mostrado en la figura \ref{fig:fdebugej1}, el cual mostraría las transiciones de los nodos y sus estados de salida.
+
+Para ver todas las etiquetas disponibles para los archivos de depuración, consulte el archivo:\newline
+\texttt{\$PLEXIL\_HOME/universal-exec/Utils/test/CompleteDebugFlags.cfg}
+
+
+\subsection{Luv: visor gráfico para TestExec}\label{sec:luv}
+
+Luv o \textit{Lightweight Universal Executive Viewer}, es un entorno gráfico para visualizar planes escritos en PLEXIL y realizar ejecuciones de simulación mediante TestExec. Está escrito en Java y su funcionamiento es simple y muy intuitivo. Para ejecutar Luv puede realizarse mediante la interfaz gráfica del sistema operativo\footnote{Si al intentar ejecutar el plan se genera un fallo en Luv, habrá que definir las rutas a las variables de PLEXIL en el entorno de trabajo del sistema gráfico} o mediante una \texttt{shell} tal y como se indica en la figura \ref{fig:runluv}. En la figura, la segunda instrucción sólo será posible ejecutarla si se han definido correctamente las variables de entorno de PLEXIL.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+$ java -jar $PLEXIL_HOME/src/luv/luv.jar &
+$ plexil
+$
+\end{lstlisting}
+\end{minipage}
+\caption{Ejecución de Luv}
+\label{fig:runluv}
+\end{center}
+\end{figure}
+
+Este capítulo no representa un manual de usuario de Luv, sino una descripción breve de las capacidades que esta aplicación ofrece. Para consultar un manual de uso detallado, consulte el capítulo 3 (\textit{Viewing Plan Execution with Luv}) en \cite{ref:ueman}.
+
+Luv funciona en modo cliente-servidor comunicando la interfaz gráfica de usuario con TestExec que será el encargado de ejecutar los planes y entregar los resultados a Luv para que este los muestre. Es decir, Luv es una interfaz gráfica para TestExec. Esto implica que podrá trabajar tanto en la máquina local, como por terminal remota. Para ello, tanto Luv como TestExec tienen el debido soporte para comunicación remota, y, por defecto, esta comunicación se llevará a cabo a través del puerto 9787. A continuación, se detallan los dos modos de ejecución de Luv:
+
+
+\begin{itemize}
+	\item \textbf{Máquina local:} sólo es necesario ejecutar Luv como se indica en la figura \ref{fig:runluv}. Tras ello, se deben seguir lo siguientes pasos:
+	\begin{enumerate}
+		\item Abrir el plan deseado desde el menú \textquotedblleft File/Open Plan\textquotedblright .
+		\item Abrir el script de simulación desde el menú \textquotedblleft File/Open Script\textquotedblright .Esto no será necesario si el nombre del script se adecua a la convención vista en la sección \ref{fig:run-ue}.
+		\item En caso de no especificar un script o que no se encuentre éste, Luv usará un script vacío creado automáticamente.
+		\item Si se desea ejecutar el plan por pasos, se deberá activar la opción \textquotedblleft Run/Enable Breaks \textquotedblright .
+		\item Proceder a ejecutar el plan: \textquotedblleft Run/Execute Plan\textquotedblright .
+	\end{enumerate}
+	\item \textbf{Ejecución vía terminal remoto:} mediante este sistema, se ejecutará TestExec por medio del script run-ue y se comunicará con Luv por el puerto antes indicado. Para ello hay que seguir los siguientes pasos:
+	\begin{enumerate}
+		\item Ejecutar Luv tal y como se indica en la figura \ref{fig:runluv}.
+		\item Ejecutar el script run-ue de la forma mostrada en la figura \ref{fig:run-ue}, anteponiendo la opción \texttt{-v} al nombre del plan. Además, podrán ser necesarias las siguientes opciones que se espcificarán antes del plan:
+		\begin{itemize}	
+			\item Si se desea ejecutar por pasos se deberá utilizar la opción \texttt{-b}.
+			\item Para ejecutar Luv y el UE desde diferentes máquinas, habrá que especificar el nombre de la máquina tras la opción \texttt{-h}.
+			\item Si el puerto de Luv ha sido modificado, se deberá de indicar el nuevo puerto a utilizar tras la opción \texttt{-p}.
+		\end{itemize}
+		\item Una vez ejecutado con las opciones convenientes, en Luv aparecerá el plan deseado y a través de la interfaz gráfica podremos ir ejecutando paso a paso (si hemos activado la opción conveniente) y visualizando los datos relacionados con el plan.
+	\end{enumerate}
+\end{itemize}
+
+En la figura \ref{fig:luv} podemos ver el aspecto que tiene la ventana principal de Luv. Junto a ella, se muestra la ventana de debug. Dicha ventana mostrará el resultado que obtendríamos si estuviésemos ejecutando el plan en una terminal. En caso de la ejecución remota, en el terminal remoto se mostraría la misma información que en dicha ventana.
+
+\begin{figure}[h]
+\begin{center}
+ \includegraphics[width=10cm]{luv}
+ \caption{Ventana principal y de debug de Luv}
+ \label{fig:luv}
+\end{center}
+\end{figure}
+
+A continuación se describen las opciones que permite Luv:
+\begin{itemize}
+	\item Permite pausar la ejecución del plan y reanudarla. Además, permite la ejecución paso a paso del plan o detener la ejecución en los nodos deseados mediante puntos de ruptura. Los puntos de ruptura podrán definirse en base al cambio de estado del nodo, al encontrarse el nodo en un estado en particular, por un estado de salida o por un estado de fallo. 
+	\item Muestra los nodos en la estructura de árbol del plan, pudiendo mostrar u ocultar las ramas según nuestras necesidades. También permite mostrar u ocultar nodos por nombre o por tipo de nodo y la búsqueda de nodos por nombre.
+	\item Puede generar archivos de depuración con los elementos deseados a través de una interfaz gráfica.
+	\item Permite obtener toda la información relativa a un nodo. La información proporcionada vendrá dada en función del tipo de nodo y de los datos de que disponga, informando así de las variables declaradas y su valor (sólo el valor inicial), las condiciones definidas, y los datos asociados al tipo de nodo (comando, asignación, etc).
+\end{itemize}
+
+
+\section{Funcionamiento del \textit{Universal Executive}}
+
+En esta sección vamos a describir el funcionamiento del UE para ejecutar los planes escritos en PLEXIL. Para ello se dará una descripción de como transcurre el estado de todos los nodos (y, por tanto, del plan en sí) en el tiempo sin entrar en detalle de los algoritmos que llevan a cabo tareas de más bajo nivel, como por ejemplo la sincronización ante condiciones de carrera. Además, una parte importante (aunque como ya se dijo, externa al UE) para la ejecución es el arbitrador de recursos. El funcionamiento de éste se verá en la sección \ref{sec:uearec}.
+
+
+\begin{comment}
+El funcionamiento del flujo de ejecución del UE se puede equiparar a una búsqueda primero en anchura en árbol de estados. En este caso, al contrario que sucede en un problema de búsqueda convencional, no es necesario definir una función sucesor para los nodos o expandirlos. Esto se debe a que el propio plan implementa la estructura de árbol jerárquico con el factor de ramificación y profundidad descritos por el programador. Otra diferencia entre el problema de búsqueda y la ejecución para la resolución del plan de PLEXIL, es que en el problema de búsqueda la solución es un camino que permita llegar desde el nodo raíz a un nodo objetivo del árbol. En este sentido, resolver un plan de PLEXIL es llevar a cabo la ejecución de los nodos uno a uno, de tal forma que el plan finalizará cuando el nodo raíz halla finalizado su ejecución. En la sección \ref{sec:tipos} vimos que para que un nodo lista finalizara su ejecución, todos sus hijos debían finalizar su ejecución (independientemente del estado de salida), y, dado que para tener un plan con más de un nodo el nodo raíz debe ser un nodo lista, el plan finalizará cuando se todos los nodos hijos de la raíz hayan finalizado su ejecución y, además, se satisfaga la condición de finalización del nodo raíz.
+
+Dado que la ejecución del plan generalmente estará influenciada por los eventos que se den en el mundo exterior (que potencialmente serán asíncronos y no deterministas), el camino que se de durante la ejecución del plan será condicionado y carecerá de importancia. Lo que determinará el estado del plan será el estado interno de todos los nodos, es decir, cuales están en ejecución, listos para ser ejecutados, o en espera de un evento. Podría ser factible pensar que el UE se comporta como un algoritmo de búsqueda local. En un a búsqueda local deseamos encontrar una configuración o estado objetivo independientemente del camino seguido para llegar a ella. En el caso de PLEXIL, la configuración objetivo es aquella en la que, independientemente del estado de salida, el nodo raíz haya finalizado su ejecución. No obstante, esta definición carece de valor, ya que para la ejecución no se aplican funciones que evalúen el coste para pasar de un estado a otro, ya que las transiciones se llevarán a cabo fundamentalmente debido a eventos externos y, además, no hay una configuración más "valida" que otra, ya que el propósito del plan es ejecutar todos los nodos que sea posibles.
+
+¿UE ~ Agente basado en modelos? 
+\end{comment}
+
+
+La ejecución del UE se lleva a cabo a través de ciclos de ejecución que especifican qué, cómo y cuándo variará el estado de los nodos en un instante específico del tiempo. Cabe destacar que la ejecución del plan procederá en pasos discretos y que los eventos (cambios en el mundo que afecten a condiciones, valores de retorno de funciones o comandos, etc) serán procesados en el orden en que llegan (FIFO o primero en entrar, primero en salir). Esto implica que ante la misma sucesión de eventos en el tiempo, el UE se comportará de forma determinista. Además de procesar el evento, se procesarán también las consecuencias que éste tenga en cascada sobre el resto del plan, lo que se conoce como semántica \textit{run-to-completion}\cite{ref:semantica}. Dichos eventos serán los que conduzcan como tal el flujo de ejecución del plan.
+
+En el punto de partida, el plan se encuentra en un estado inactivo. Esto quiere decir que todos los nodos estarán detenidos y no afectarán al mundo externo. El primer nodo en pasar a ejecución será la raíz y, en el instante siguiente, todos sus hijos pasarán al estado de espera antes de ser ejecutados. En dicho estado, el nodo podrá entrar en ejecución cuando se verifique su condición de inicio (siendo por defecto verdadera), pasando a ejecutar las acciones definidas en su cuerpo. Una vez ejecutado, el nodo se marcará como iteración finalizada y, en base a la presencia o no de una condición de repetición, su estado final de ejecución será en espera para nodos con condición de repetición, o finalizado para nodos sin dicha condición. Hay una excepción a esta regla, los nodos lista, que tras su ejecución pasarán a un estado finalizando que indica que el nodo ha cumplido su objetivo y esta en espera de que sus nodos hijo hayan finalizado. En caso de que un nodo lista tenga condición de repetición, la lista completa podrá volver a ejecutarse cuando ésta se cumpla, pero no al revés.
+
+Hay tres causas que marcarán la finalización de un nodo: que complete su ejecución, la presencia de fallos o eventos externos. En el primer caso, la finalización de un nodo dependerá del tipo de éste. Por ejemplo los nodos de asignación terminarán cuando se halla establecido el nuevo valor en la variable. En el caso de los nodos lista, si el nodo ha cumplido su condición de finalización pero sus nodos hijos no han terminado su ejecución, se realizará una terminación limpia de los hijos de la forma que sigue:
+\begin{enumerate}
+	\item Sólo los nodos activados o en ejecución continuarán con sus procesos de forma concurrente.
+	\item Los hijos pendientes de verificar sus condiciones de inicio no serán ejecutados.
+	\item El padre esperará a que los hijos en ejecución finalicen.
+\end{enumerate}
+
+En el caso de que un nodo finalice por un fallo (pre/postcondición o condición invariante que no sea satisfecha), el nodo abortará su ejecución de forma abrupta, incluyendo el caso de los nodos lista, que no finalizarán de la forma antes descrita. 
+
+Una vez finalizado un nodo, si éste tiene condición de repetición, los datos internos del nodo se reinicializarán y el nodo volverá al estado de espera. En relación a esto, hay que indicar que las condiciones del nodo, una vez activadas, no podrán ser desactivadas posteriormente salvo por un reseteo del nodo. Esto quiere decir que si en un instante dado, un nodo en espera verifica tras un evento que su condición de inicio es correcta, el nodo comenzará la ejecución, aunque en el instante siguiente dicha condición se torne falsa nuevamente.
+
+
+\subsection{Ciclos de ejecución}
+
+Los ciclos fundamentales de ejecución de un plan PLEXIL serán los \textit{macro steps} y los \textit{atomic steps}. Los \textit{macro steps} serán los pasos discretos que se ejecutarán en el plan. Dichos pasos están compuestos por \textit{micro steps} o ejecución en paralelo de una serie de \textit{atomic steps}. Los \textit{atomic steps} actúan sobre cada nodo individual.
+
+Como puede verse, el nivel de ejecución inferior (refiriéndose por inferior a que esta más alejado del mundo exterior y más centrado en el estado interno del plan) es el \textit{atomic step}, mientras que el nivel superior será el nivel de ejecución, el cual puede verse como una serie de relaciones entre los estados del mundo exterior y el estado interno del plan. La ejecución de un plan por tanto, podrá analizarse en base a las acciones llevadas a cabo por cada nivel de ejecución de forma incremental partiendo desde el nivel inferior. En los siguientes apartados se llevará a cabo el análisis del funcionamiento de cada nivel y se finalizará poniendo todos los niveles en común para ver como se comporta la ejecución completa del UE en el ciclo de ejecución.
+
+\subsubsection{\textit{Atomic step}}
+
+Un paso atómico o \textit{atomic step} define una operación interna o una transición del estado para un nodo en un instante de tiempo. El paso atómico representa una variación de un dato interno del nodo que sólo afectará directamente a éste y nunca al estado del mundo exterior. Hay un total de 37 reglas que definen las posibles transiciones de un nodo; éstas podrán verse de forma gráfica en el apéndice \ref{ap:transiciones}. Dichas reglas no serán aplicables a todos los nodos, dado que en ciertos estados las posibles transiciones entre estados variarán en base al tipo de nodo.
+
+
+\subsubsection{\textit{Micro step}}
+
+Un \textit{micro step} representa la ejecución paralela de varios pasos atómicos. Los nodos se ejecutan en paralelo, de tal forma que en un único instante de tiempo puede haber uno o más nodos realizando pasos atómicos. En este nivel se llevan a cabo varias tareas: se modifican los valores de salida y estado de los nodos en ejecución y se llevan a cabo tareas de sincronización. Aquí se establecen las políticas que permitirán resolver condiciones de carrera en caso de, por ejemplo, que dos nodos intenten acceder a una misma variable para asignarle un valor. En este caso, se utilizará una regla de precedencia para evitar accesos simultáneos a recursos compartidos.
+
+
+\subsubsection{\textit{Quiescence cycle}}
+
+El ciclo de reposo o \textit{quiescence cycle} indica que se han realizado todos los \textit{micro steps} posibles hasta que todos los nodos que podían ser ejecutados han alcanzado un estado estable (a la espera de un evento, finalizado, etc). Es decir, el plan está en un estado estable a la espera de nuevos eventos que permitan continuar con la ejecución de nodos que esperan por ellos o por la finalización de nodos bloqueados hasta la llegada de los mismos.
+
+
+\subsubsection{\textit{Macro step}}
+
+Hasta este momento la ejecución del plan se lleva a cabo sólo alterando el estado interno del plan. En los \textit{macro steps} es donde se lleva a cabo la comunicación entre el plan y los eventos producidos por el mundo exterior. 
+
+Los \textit{macro steps} se inician con la llegada de un nuevo evento externo al sistema. Todos los nodos que estuvierán esperando por dicho evento, realizarán transiciones a su siguiente estado en paralelo a través de \textit{micro steps}. Estas transiciones pueden provocar cambios internos que permitan transicionar a más nodos, con lo cual se llevarán a cabo más \textit{micro steps} hasta que se finalice la secuencia de cambios en cascada. Es en ese momento cuando se alcanza el ya mencionado \textit{quiescence cycle}. Es decir, el estado de reposo se alcanza al final de un \textit{macro step}, el cual no es más que una secuencia de \textit{micro steps} ocasionados por la recepción de un evento. Una vez se finaliza el paso, el sistema puede atender nuevos eventos. Como se mencionó al principio de la sección, los eventos son atendidos en orden de llegada (FIFO) y hasta que un evento no haya sido ``despachado'' no se comenzará a atender al siguiente.
+
+Una particularidad importante es que los datos del mundo exterior relacionados con el plan sólo serán leídos en la primera utilización de cada \textit{macro step}, así como a la finalización de éste. Dicho de otra manera, se asume que los cambios del mundo exterior sólo serán visibles al comienzo y al final del paso, y que una vez leídos permanecerán inalterados. Una vez leído un dato, una nueva lectura del mismo dato en el mismo \textit{macro step} dará el mismo valor aunque éste haya cambiado en el mundo real. Con ello se consigue una optimización en el acceso a los valores necesarios del mundo real. 
+
+También hay que indicar que la ejecución de comandos (o actuaciones sobre el mundo exterior) no las lleva a cabo el propio plan ni el UE, sino que se subrogan a un sistema de bajo nivel encargado de ejecutar las ordenes indicadas por el plan. En este sentido, un nodo de comando solicitará la ejecución de un comando determinado y podrá continuar su ejecución o esperar a que el mundo exterior genere un evento como respuesta a dicha acción. La sincronización entre el UE y el soporte de bajo nivel se llevará a cabo a través de interfaces que se verán en la sección \ref{sec:ueframew}.
+
+
+\subsubsection{Nivel de ejecución}
+
+El nivel o ciclo de ejecución puede describirse como la sucesión de \textit{macro steps} y la lista de eventos que se producen en el mundo a lo largo del tiempo. Esto representa como evoluciona tanto el plan como el mundo desde el inicio hasta la finalización del plan. En este punto también pueden verse los efectos producidos por la ejecución de las acciones indicadas por el plan de PLEXIL y ejecutadas por el soporte de bajo nivel asociado. En la figura \ref{fig:ciclosue} puede verse un esquema con todos los niveles de ejecución.
+
+\begin{figure}[h]
+\begin{center}
+ \includegraphics[width=12cm]{Ciclos}
+ \caption{Representación de los ciclos de ejecución del UE}
+ \label{fig:ciclosue}
+\end{center}
+\end{figure}
+
+Finalmente hay que hacer una valoración acerca de como se trata la ejecución de PLEXIL en el tiempo. PLEXIL no hace valoraciones acerca de cuanto dura la ejecución de un paso, al contrario de lo que suelen hacer otros lenguajes. Generalmente se asume que un paso (en este caso sería un \textit{micro step}) toma cero unidades de tiempo, o, dicho de otra forma, el mundo cambia con una frecuencia muy inferior a la duración de los pasos de ejecución. En PLEXIL esto no es importante, y se asume que si un \textit{micro step} tarda un tiempo mayor que cero, quiere decir que el \textit{macro step} en curso durará un tiempo mayor que cero. Durante dicho periodo, si el mundo exterior varía, puede ocurrir que los datos que utilice el plan sean obsoletos (sólo se leen los datos externos al inicio y fin del \textit{macro step}. Esto también sucede cuando un evento se procesa mucho después de haber sido recibido. En estos casos, la lectura de los datos al final del \textit{macro step} provocará que se actualice la información y se descarte aquella que fuera obsoleta.
+
+
+
+\section{Arbitrador de recursos}\label{sec:uearec}
+
+PLEXIL permite construir la lista de recursos necesarios para poder ejecutar un determinado comando. El arbitrador de recursos, integrado como una parte del UE, implementa la lógica necesaria para poder operar con esa información y mantener actualizada la información del uso y disponibilidad de recursos. En base a esta información, el arbitrador de recursos podrá permitir o denegar los comandos que cumplan o no con las restricciones impuestas. La figura \ref{fig:resarbfes} muestra un esquema simple de los componentes e interacciones en los que está involucrado el arbitrador de recursos.
+
+\begin{figure}[h]
+\begin{center}
+ \includegraphics[width=12cm]{resarb}
+ \caption{Esquema del arbitrador de recursos}
+ \label{fig:resarbfes}
+\end{center}
+\end{figure}
+
+El arbitrador de recursos ofrece las siguientes funcionalidades:
+\begin{itemize}
+	\item Implementa recursos renovables y no renovables, que pueden ser unarios o no unarios.
+	\item El estado de los recursos y su consumo son gestionados por él mismo. Esto asume que el consumo de cada comando es conocido con antelación y fijo. Sólo gestionará el uso de recursos de los comandos emitidos por el UE.
+	\item No hace predicciones acerca del tiempo de duración de los comandos o del instante en que el sistema real hace uso de los recursos. Esto quiere decir que el consumo de recursos se hará inmediatamente al permitir la ejecución del comando, y, en caso de haber generación de recursos, ésta tendrá lugar al finalizar el comando.
+\end{itemize}
+
+También hay dos restricciones importantes en el arbitrador de recursos:
+\begin{itemize}
+	\item Todos los recursos utilizados en un mismo comando tienen la misma prioridad (es decir, realmente no se prioriza el uso de recursos, sino que se establece prioridad al comando). No obstante, cada recurso puede especificar su propia prioridad (XML y el compilador de PLEXIL lo permiten), pero el arbitrador de recursos sólo tomará la primera prioridad establecida y la utilizará como prioridad de todos los recursos para el comando dado.
+	\item El valor mínimo del uso de recurso es ignorado (\texttt{LowerBound}).
+\end{itemize}
+
+Es importante destacar que el arbitrador de recursos sólo se comunicará con el UE, por tanto nunca podrá hacer consultas al sistema real para conocer el estado de los recursos o comprobar la disponibilidad de los mismos. Esto responde al esquema visto anteriormente: el grueso del sistema para la gestión de recursos es el arbitrador de recursos. Además de éste, los únicos elementos afectados por el uso de recursos es el lenguaje (se considera que el tratamiento de los recursos por parte del lenguaje es una extensión de éste) y el sistema externo, pues será el que finalmente haga uso de los recursos de que dispone. Por tanto, este sistema de control de recursos implica que en vez de enviar los comandos directamente al subsistema externo, el interfaz externo primero tiene que invocar el proceso de arbitraje y luego expedir sólo los comandos aceptados al subsistema externo.
+
+
+\subsection{Algoritmo del arbitrador}
+
+Al arbitrador de recursos le llegarán listas de comandos con sus respectivos usos de recursos desde el UE. El arbitrador entonces tendrá que gestionar los comandos para aceptar tantos comandos como sea posible comprobando que no se exceda el máximo permitido en el uso de los recursos asociados. Además, deberá tener en cuenta si hay competencia entre comandos por el uso de los mismos recursos, en cuyo caso deberá tomar en cuenta la prioridad de cada comando para el uso de recursos y aceptar sólo la ejecución del comando con mayor prioridad.
+
+El algoritmo de funcionamiento del arbitrador de recursos es el que se expone a continuación:
+
+\begin{enumerate}
+	\item Para que un comando sea aceptado, todos los recursos que emplea deben estar disponibles en suficiente cantidad para llevarlo a cabo.
+	\item El arbitrador optimiza tanto en prioridad de los recursos aceptados como en el número total de estos.
+	\item Un comando de menor prioridad sólo será aceptado si una vez aceptados los de mayor prioridad hay suficientes recursos como para que éste entre en ejecución. También puede darse el caso de que sea aceptado por haber denegado la ejecución a los de mayor prioridad por no cumplir las restricciones de uso de recursos.
+	\item Si dos recursos tienen la misma prioridad, estos serán ejecutados en el orden en el que han llegado al arbitrador al final del ciclo de espera. 
+	\item Cuando un grupo de comandos ha sido aceptado, en el peor de los casos no se superará el uso del máximo de los recursos permitidos a cada comando.
+\end{enumerate}
+
+
+\subsection{Archivo de configuración de recursos}
+
+Por defecto, el arbitrador de recursos obtiene la identidad de los recursos ejecutados en el plan directamente de los comandos, cuando un comando necesita un recurso en particular, el arbitrador lo añade a su base de datos, y, una vez completada la ejecución del comando, dicho recuso será purgado de la base de datos del arbitrador. Además, establece el valor máximo para recursos, tanto renovales como consumibles, en 1.0.
+
+No obstante, el usuario tiene la opción de recolectar la información asociada al uso de recursos del sistema a implementar y plasmarla en un archivo de configuración de recursos que podrá ser leído por el arbitrador de recursos. La expresión mínima de este archivo será una relación de los recursos usados y los valores máximos de consumo y renovación de estos. Además podrá añadir información acerca de las dependencias entre recursos. Como se mencionó anteriormente, se pueden crear jerarquías de recursos que deberán ser indicadas en este fichero, representadas en forma de gráfico dirigido y ponderado acíclico. En la figura \ref{fig:graforec} se muestra un ejemplo de la estructura de una jerarquía de recursos y en la figura \ref{fig:filerec} el formato correspondiente para el archivo de configuración. Los pesos representan el valor absoluto del consumo del recurso indicado. En caso de no indicar peso, implica que requiere el uso del recurso en su totalidad.
+
+\begin{figure}[h]
+\begin{center}
+ \includegraphics[width=12cm]{graforec}
+ \caption{Grafo de jerarquía de recursos}
+ \label{fig:graforec}
+\end{center}
+\end{figure}
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+recurso1 max1 r1_2 recurso2 r1_3 recurso3 r1_4 recurso4
+recurso2 max2 1.0  recurso5 1.0  recurso6 r2_7 recurso7
+recurso3 max3 1.0  recurso8
+recurso4 max4
+recurso5 max5
+recurso6 max6
+recurso7 max7
+recurso8 max8
+\end{lstlisting}
+\end{minipage}
+\caption{Archivo de configuración para el grafo de la figura \ref{fig:graforec}}
+\label{fig:filerec}
+\end{center}
+\end{figure}
+
+\section{\textit{Universal Executive Framework}}\label{sec:ueframew}
+
+En esta sección se mostrará una guia para poder crear una aplicación que emplee el \textit{Universal Executive} como sistema de ejecución para un plan modelado en PLEXIL. Se verá de forma básica los elementos necesarios para instanciar el UE y el prototipo básico de una librería (que utilice sólo comandos, no se verán \textit{lookups} o la implementación de telemetría) conforme a la especificación creada para dar solución a una arquitectura típica de tres capas (3T) para la locomoción autónoma de un robot hexápodo \cite{ref:Ptinto10}.
+
+Para poder montar una aplicación que haga uso del lenguaje PLEXIL serán necesarios dos elementos: 
+\begin{itemize}
+ \item \textbf{UE \textit{framework}}: será una instancia del \textit{universal executive framework} encargada de inicializar los elementos del ejecutor, fundamentalmente los interfaces (a partir del archivo de configuración de interfaces que se verá en la sección \ref{sec:configinf}) y los planes y librerías escritas en PLEXIL (el plan a ejecutar). No será necesaria la modificación del \textit{framework} para aplicaciones sencillas; los elementos necesarios para su instanciación se verán en la sección \ref{sec:uecod}.
+ \item \textbf{Una o más librerías dinámicas}: en función de las directrices impuestas por el archivo de configuración de interfaces se deberán tener una o más librerías dinámicas que contengan la implementación de los comandos y \textit{lookups} empleados en el plan PLEXIL. La forma de crear estas librerías se vera en la sección \ref{sec:libso} y requieren la especificación de una serie de funciones virtuales.
+\end{itemize}
+
+El funcionamiento de una aplicación que emplee el lenguaje PLEXIL y el ejecutor UE a la hora de realizar un comando es el que se muestra en la figura \ref{fig:comando}. Cuando un plan PLEXIL invoca un comando, el \textit{framework} del UE (esto es, el ejecutor) solicita a la interfaz que lleve a cabo el comando. La interfaz del ejecutor posee un archivo de configuración definido por el usuario (archivo de configuración de interfaces) que indica que comandos se pueden llevar a cabo y que librería dinámica implementa dicho comando. Una vez localizada la librería para el comando solicitado se asignará un manejador de comando desde el ejecutor y se solicitará a la librería que lleve a cabo el código de la función asociada a dicho comando. Dentro de dicho código se podrá actualizar tanto el estado del manejador de comando, como el valor de retorno del comando si lo tuviera. La librería para poder operar de cara al ejecutor deberá poseer una interfaz específica que permita al ejecutor la solicitud de comandos de forma genérica.
+
+\begin{figure}[h]
+\begin{center}
+ \includegraphics[width=14cm]{ComandoUE}
+ \caption{Flujo de ejecución de un comando}
+ \label{fig:comando}
+\end{center}
+\end{figure}
+
+
+\subsection{Archivo de configuración de interfaces}\label{sec:configinf}
+
+El archivo de configuración de interfaces será un archivo con codificación XML que indicará las librerías empleadas por el plan PLEXIL, comandos y \textit{lookups} que lleva a cabo cada una de ellas. La etiqueta de mayor nivel del archivo será \texttt{Interfaces}. Por cada librería dinámica a emplear se deberá definir un adaptador de interfaz mediante la etiqueta \texttt{Adapter} y el atributo \texttt{AdapterType= "\textit{nombre\_libreria}"}, donde \textit{nombre\_libreria} es el nombre de la librería dinámica a emplear (sin necesidad de extensión ni el prefijo \texttt{lib} estándar).
+
+Tras esto se podrán declarar para cada adaptador la lista de comandos o \textit{lookups} de los cuales se encarga cada librería. Ambos casos serán una lista de los nombres de los comandos (sin lista de parámetros ni tipo de retorno si lo tuvieran) separados por comas. La etiqueta que define el listado de comandos es \texttt{CommandNames} y para los \textit{lookups} será \texttt{LookupNames}. En el caso de que se quiera declarar una librería a la que asociar todos los comandos que no se han asociado explicitamente con otra librería, se deberá poner la etiqueta \texttt{DefaultAdapter} tras el identificador del adaptador.
+
+En la figura \ref{fig:ejinfich} se muestra un archivo de interfaces de ejemplo. Además de las librerías que creemos para nuestra propia aplicación, la distribución de PLEXIL incorpora algunas librerías con útiles como gestión de \textit{sockets}, utilidades variadas, gestión del tiempo del sistema operativo nativo (\texttt{OSNativeTime}) y el adaptador \texttt{Dummy} que retorna siempre COMMAND\_SUCCESS.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=xml, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+<Interfaces>
+	<Adapter AdapterType="OSNativeTime">
+		<LookupNames>
+		time
+		</LookupNames>
+ 	</Adapter>
+ 	<Adapter AdapterType="Dummy">
+		<DefaultAdapter/>
+	</Adapter>
+		<Adapter AdapterType="PDDLue">
+		<CommandNames>
+		crear_planificador, planificar, sig_accion,
+		insertar_predicado, modificar_predicado,
+		objeto_predicado, objeto_accion, valor_funcion,
+		</CommandNames>
+		<LookupNames>
+		duracion
+		</LookupNames>
+	</Adapter>
+</Interfaces>
+\end{lstlisting}
+\end{minipage}
+\caption{Ejemplo de archivo de configuración de interfaces}
+\label{fig:ejinfich}
+\end{center}
+\end{figure}
+
+
+\subsection{Implementación del ejecutor}
+
+En esta sección se mostrará de forma breve mediante un ejemplo los elementos necesarios para instanciar el ejecutor UE y la creación de una librería dinámica que sea capaz de interactuar con él. El esquema básico de la aplicación es el que se muestra en la figura \ref{fig:clases}, en la cual se puede distinguir en la parte superior el programa principal que hace uso de una clase que instancia el ejecutor, así como una clase C++ que ha heredado la clase \texttt{InterfaceAdapter} y emplea las funciones de una librería para dar servicio al ejecutor. Además se pueden ver las dependencias directas del código de la distribución de PLEXIL que tiene cada elemento.
+
+\begin{figure}[h]
+\begin{center}
+ \includegraphics[width=9cm]{clases}
+ \caption{Esquema de la arquitectura empleada}
+ \label{fig:clases}
+\end{center}
+\end{figure}
+
+Lo mostrado en las siguientes secciones será el desarrollo empleando la versión 0.90 de la distribución de PLEXIL. En versiones posteriores pueden darse cambios. La distribución de archivos dentro de una carpeta raíz (sea \texttt{src}) empleada es la siguiente:
+\begin{itemize}
+ \item \texttt{main}: codigo fuente de la función principal del programa.
+ \item Carpeta \textit{comandos}: aquí se encuentra el código fuente para crear la librería estática \texttt{comandos}.
+ \item Carpeta \textit{PLEXIL}: dentro de esta carpeta se encuentran los archivos \texttt{Makefile} para crear el ejecutor y la librería dinámica. Ademas se encuentra el código asociado a los mismos (una clase por cada uno: \texttt{run\_UE} y \texttt{comandosInterfaceAdapter} respectivamente) y dos subcarpetas:
+ \begin{itemize}
+  \item Carpeta \textit{tinyxml}: esta carpeta proviene de la distribución de PLEXIL y tiene los componentes necesarios del parseador XML.
+  \item Carpeta \textit{src}: aquí se encuentran los componentes de PLEXIL. Estará compuesta por las carpetas \textit{app-framework}, \textit{exec} y \textit{utils} que se pueden encontrar en \texttt{\$PLEXIL\_HOME/src}.
+ \end{itemize}
+\end{itemize}
+
+
+\subsubsection{Implementación del \textit{framework} del UE}\label{sec:uecod}
+
+Para poder compilar los elementos necesarios del \textit{framework} en la carpeta \textit{app-framework} se encuentra un archivo \texttt{Makefile} que podemos adaptar a nuestras necesidades con el fin de compilar el sistema de ejecución de nuestra aplicación.
+
+En este ejemplo en concreto tendremos una clase que instanciará los elementos del ejecutor \texttt{run\_UE} y una clase \texttt{main} que se encargará de crear el resto del contenido de nuestra aplicación. Además se hará uso de una librería dinámica (\texttt{comandos}), que es en origen el código de una librería estática. El \texttt{Makefile} empleado es el que se muestra en la figura \ref{fig:makeexec}\footnote{Se ha omitido la licencia contenida en el \texttt{Makefile} original.}.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=bash, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+include makeinclude/standard-defs.make
+EXECUTABLE	:= a.out
+
+# External dependencies
+INC_DIRS	+= tinyxml src/utils src/exec src/app-framework ../comandos ../../include
+LIB_PATH	+= ../../lib
+LIBS		+= tinyxml PlexilUtils PlexilExec PlexilAppFramework Comandos dl
+SRC		:= ../main.cpp run_UE.cpp
+INC		:= 
+
+include makeinclude/standard-targets.make
+ifneq (\$(MAKECMDGOALS),clean)
+-include Makedepend
+endif
+\end{lstlisting}
+\end{minipage}
+\caption{Ejemplo de \texttt{Makefile} para el ejecutor}
+\label{fig:makeexec}
+\end{center}
+\end{figure}
+
+El archivo \texttt{run\_UE} es básicamente una copia del archivo \texttt{\$PLEXIL\_HOME/src/app- framework/test/testMain.cc} el cual permite instanciar mediante el parámetros (para definir el plan PLEXIL, librerías PLEXIL, archivo de configuración de interfaces y archivo de depuración) el ejecutor y ejecutar el plan PLEXIL indicado.
+
+\subsubsection{Implementación de una librería dinámica para el UE}\label{sec:libso}
+
+Para utilizar una librería en un plan PLEXIL se deberá implementar la clase C++ \texttt{InterfaceAdapter} de forma que de soporte a nuestras necesidades. Dicha clase posee una serie de funciones virtuales para permitir codificar el funcionamiento de los comandos y \textit{lookups}. El funcionamiento de ambos es similar, de tal forma que la ejecución de un comando en un plan PLEXIL implica una llamada a la función \texttt{executeCommand} con una serie de parámetros que permiten conocer el nombre del comando, los parámetros utilizados al invocar el comando y el manejador asociado a éste. Con ello se podrán realizar las llamadas pertinentes a las funciones implementadas en el sistema externo, de tal forma que el resultado obtenido por dichas funciones podrá ser devuelto al ejecutor a través del manejador de comando asociado, mediante la función \texttt{handleValueChange}. Además con la misma función se puede asociar al manejador el estado de ejecución del comando en cualquier momento durante la ejecución del mismo. Dicho estado acepta los valores vistos en la sección \ref{sec:mcom}.
+
+Al igual que en el caso anterior, dispondremos de un \texttt{Makefile} genérico que podremos adaptar para crear nuestra propia librería. El archivo empleado para este ejemplo es el que se muestra en la figura \ref{fig:makelib}. Con ello obtendremos la librería \texttt{libComandos.so} que podremos emplear para dar servicios a los planes PLEXIL que utilicen los comandos implementados.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=bash, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+include makeinclude/standard-defs.make
+OSTYPE   ?= $(shell uname -s)
+MACHTYPE ?= $(shell uname -p)
+OS_ARCH = $(OSTYPE)-$(MACHTYPE)
+
+LIBRARY := Comandos
+LIBRARY_SRC := comandosInterfaceAdapter.cpp 
+LIBRARY_OBJ := $(LIBRARY_SRC:.cpp=.o)
+INC_DIRS += tinyxml src/utils src/exec src/app-framework ../comandos ../../include
+LIBS += tinyxml Comandos
+LIB_TARGET = lib$(LIB_NAME)$(LIB_EXT)
+
+include makeinclude/standard-targets.make
+# these must follow the above 'include'
+$(SHLIB): depend $(LIBRARY_OBJ)
+	$(LD) $(SHARED_FLAGS) $(LIB_PATH_FLAGS) $(LIB_FLAGS) -o $@ $(LIBRARY_OBJ)
+$(ARCHIVE): $(LIBRARY_OBJ) depend
+	$(AR) -o $@ $(LIBRARY_OBJ)
+-include Makedepend
+\end{lstlisting}
+\end{minipage}
+\caption{Ejemplo de \texttt{Makefile} para una librería dinámica}
+\label{fig:makelib}
+\end{center}
+\end{figure}
+
+El archivo \texttt{comandosInterfaceAdapter} será una clase C++ que hereda de la clase \texttt{PLEXIL::InterfaceAdapter}. Con ello dispondremos de una serie de funciones virtuales que deberemos implementar para dar soporte a la interfaz con el ejecutor. En este ejemplo sólo se verá el funcionamiento de los comandos. Se verá cómo se reciben los comandos, el parseo de parámetros, modificación del estado del manejador de comando y el retorno de un valor como resultado de la ejecución del comando.
+
+Antes de crear cualquier otro elemento de código habrá que registrar el adaptador como se muestra en la figura \ref{fig:regadapter}.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+extern "C" {
+	void initcomandos() {
+		REGISTER_ADAPTER(comandosInterfaceAdapter,"Comandos");
+	}
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Registro del adaptador de una librería}
+\label{fig:regadapter}
+\end{center}
+\end{figure}
+
+Una vez hecho esto podremos pasar a implementar las funciones necesarias para que la librería cumpla su cometido. Aquí sólo se verán los elementos básicos, pero se puede definir el comportamiento deseado en función de las necesidades de la librería y la aplicación para, por ejemplo, la inicialización de la librería, finalización, reinicio de la misma, etc. Si deseamos que la librería disponga de datos iniciales o si tiene que crear una estructura de datos en su inicialización, se podrá incluir el código necesario en la función \texttt{initialize()}. Además en dicha función habrá que iniciar un atributo heredado que permitirá conectar la librería con la interfaz del ejecutor. Para ello habrá que emplear la instrucción \texttt{m\_execInterface.defaultRegisterAdapter(getId());}. El resto de funciones (\texttt{start()}, \texttt{stop()} o \texttt{reset()} por ejemplo) se pueden dejar con un simple \texttt{return true;} si no se requiere que tengan un comportamiento específico.
+
+Las funciones que dan soporte a la interfaz del ejecutor son \texttt{lookupNow()}, \texttt{lookup OnChange()} y \texttt{executeCommand()}. Las primeras se encargan de las solicitudes de \textit{lookups} y la última, en la que entraremos en más detalle, de los comandos.
+
+A la hora de recibir un comando, el punto de entrada a nuestro código será la función \texttt{executeCommand} que recibirá una cadena de texto (en formato \texttt{PLEXIL::LabelStr}, consulte la documentación de PLEXIL para familiarizarse con dicha clase) que contendrá el nombre del comando a ejecutar, así como la lista de argumentos con la que ha sido invocado, la variable destino para el valor de retorno del comando y el manejador del comando que permitirá notificar al ejecutor en que estado de ejecución se encuentra nuestro comando en cada momento.
+
+Una vez tengamos la identificación del comando solicitado deberemos proceder a ejecutar el código pertinente. Una de las primeras cuestiones será notificar al ejecutor que el comando ha sido recibido, para ello se empleará la función \texttt{handleValueChange()}, siendo los parámetros el manejador de comando y la variable que determina el nuevo estado del manejador (pueden verse los estados posibles en la sección \ref{sec:mcom}). Una vez modificado el valor del manejador se deberá notificar el cambio al ejecutor para que éste modifique su estado interno. Ello se hace con la función \texttt{notifyOfExternalEvent()}. Es importante mencionar que estas funciones operan directamente sobre el objeto \texttt{m\_execInterface}. En cualquier momento se podrá modificar el estado del manejador del comando, así como notificar el valor de retorno del comando. Esto también se hará con la función \texttt{handleValueChange()} pero se empleará como parámetro la variable destino indicada como parámetro en la función de entrada. Hay que tener en cuenta que todos los valores notificados al ejecutor deberán de ser de tipo \textit{double}, de tal forma que las cadenas de caracteres deberán ser convertidas a objetos \texttt{LabelStr} que están definidos por un identificador de tipo \textit{double}, o se deberán emplear los objetos de la clase \texttt{BooleanVariable} para definir los tipos booleanos. Una vez actualizado el valor de la variable no será necesario notificar al ejecutor de dicho cambio.
+
+Finalmente, una vez ejecutado el código de nuestra función, antes de que finalice la función \texttt{executeCommand()} se deberá modificar el resultado del comando (COMMAND\_SUCCESS o COMMAND\_FAILED) y notificar el cambio en el manejador al ejecutor como se ha visto anteriormente. En la figura \ref{fig:codlib} se puede ver un ejemplo para una función \texttt{executeCommand()} que da servicio a dos comandos.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+void PDDLInterfaceAdapter::executeCommand(const PLEXIL::LabelStr& name, const std::list<double>& args, PLEXIL::ExpressionId dest, PLEXIL::ExpressionId ack)
+{
+    bool success = true;
+    std::string nStr = name.toString();
+    std::list<double>::const_iterator largs = args.begin();
+    int nplanner = static_cast<int> (*largs);
+    m_execInterface.handleValueChange(ack, PLEXIL::CommandHandleVariable::COMMAND_RCVD_BY_SYSTEM());
+    m_execInterface.notifyOfExternalEvent();
+    if(nStr == "comando1")
+    {
+        PLEXIL::LabelStr arg1(*largs);
+        printf("Argumento: \%s",(char*)arg1.c_str());
+        ultimaacc.push_back(new stpredicado);
+        unsigned int num = 1;
+        m_execInterface.handleValueChange(dest,num);
+    }
+    else if(nStr == "comando2")
+    {
+        bool arg2 = static_cast<bool> (*(++largs));
+        if(!arg2)
+	        success=false;
+        m_execInterface.handleValueChange(dest,success?PLEXIL::BooleanVariable::TRUE():PLEXIL::BooleanVariable::FALSE());
+    }
+    
+    if(success)
+        m_execInterface.handleValueChange(ack, PLEXIL::CommandHandleVariable::COMMAND_SUCCESS());
+    else
+        m_execInterface.handleValueChange(ack, PLEXIL::CommandHandleVariable::COMMAND_FAILED());
+    m_execInterface.notifyOfExternalEvent();
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Ejemplo de función \texttt{executeCommand()} para dos comandos}
+\label{fig:codlib}
+\end{center}
+\end{figure}
+
+\subsubsection{Implementación de una librería dinámica para el UE a partir de SampleAdapter}\label{sec:salibso}
+
+Para la implementación de una librería dinámica para el UE, se propone la edición y adaptación por parte del programador de un entorno desarrollado por la \textit{Universities Space Research Association} (USRA), cuyo código se puede encontrar dentro del repositorio de PLEXIL. Dentro de los archivos que se necesitan para la implementación, encontramos dos archivos fuente (y sus correspondientes \textit{headers}) \texttt{types.cc} y \texttt{subscriber.cc} que serán comunes a todas las interfaces a desarrollar, así como otros dos archivos fuente específicos, \texttt{SampleAdapter.cc} y \texttt{sample\_system.cc}. 
+
+Internamente, PLEXIL trata todos los tipos de datos como \texttt{double}, pese a su definición en \texttt{Int}, \texttt{Real}, \texttt{String}, \texttt{Bool} y \texttt{Array}. El primer archivo fuente, \texttt{types.cc} y \texttt{types.hh} crea unas funciones muy útiles para poder transformar todos los tipos de datos que se utilicen en la librería, a los datos utilizados en PLEXIL. Destacando un tipo de dato \texttt{Any} que se utilizará especialmente para la gestión de los estados y \textit{lookups} de la librería. Esta abstracción que aporta este archivo, facilita el trabajo para evitar el empleo de operadores \textit{cast}. Estas funciones son del tipo \texttt{encodeTYPE} y \texttt{decodeTYPE}, siendo \texttt{TYPE} el tipo de dato que admite PLEXIL.
+
+Por otra parte, \texttt{subscriber.cc} y \texttt{subscriber.hh} implementan funciones para la actualización de los valores de los estados utilizados en la librería a implementar. Por su forma de implementación mediante sobrecarga del método \texttt{publish}, se hace más sencillo la modificación de un estado, sin atender al tipo de dato de estado, parámetros necesarios, etc. 
+
+El primero de los archivos a modificar es \texttt{SampleAdapter.cc}. Se propone no añadir métodos a la clase directamente en este archivo fuente, dado que ese es el objetivo de \texttt{sample\_system}. Por una parte, debemos implementar las operaciones que deseemos en el \texttt{executeCommand}, que serán ejecutadas según el plan de PLEXIL creado, así como el control de los \textit{lookups} en el método \texttt{lookupNow} que se explica a continuación.
+
+Cuando el UE encuentra un nodo del tipo \textit{Command node}, llama al método \texttt{executeCommand} indicándole el nombre del comando, mediante \texttt{PLEXIL::LabelStr}, una lista de argumentos del tipo \texttt{Any} visto anteriormente, y los argumentos \texttt{dest} y \texttt{ack} del tipo \texttt{PLEXIL::ExpressionId} utilizados por el UE para el manejador de comandos, que indicara si ha sido ejecutado correctamente, y la valor de retorno de la función. El funcionamiento de este método es simple, compara el nombre del comando a ejecutar (\texttt{PLEXIL::LabelStr command\_name}) con los valores (\textit{string} o \texttt{PLEXIL::LabelStr}) de aquellos comandos a implementar, y llama a la función correspondiente. En caso de no coincidir con ningún comando, se mostrará un error. 
+
+Por último, en caso de devolver un valor, se pasará mediante el manejador. Los argumentos del comando, son pasados mediante una lista de objetos tipo \texttt{Any}, que serán convertidos a tipos de datos de PLEXIL, mediante el uso de las funciones \texttt{encodeTYPE} y \texttt{decodeTYPE} vistas anteriormente.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+void EjemploAdapter::executeCommand (const LabelStr& command_name, const list<Any>& args, PLEXIL::ExpressionId dest, PLEXIL::ExpressionId ack) 
+{
+	// name contiene el nombre del comando ejecutado por el UE
+  string name = command_name.toString();
+  debugMsg("EjemploAdapter", "executeCommand recibido " << name);  
+
+	// Variable para el resultado, en caso de necesitar return
+  Any resultado = Unknown;
+  
+	// Lista de argumentos del comando
+  vector<Any> argv(10);
+  copy (args.begin(), args.end(), argv.begin());
+
+  if (name == "Funcion1")
+  {
+  	// Este comando no devuelve valor, pasa un único argumento (Real) a la función
+	setValorX (decodeReal (*args.begin()));
+  } else if (name == "Funcion2")
+  {
+  	// Este comando no devuelve valor, pasa dos argumentos
+	avanzaRover (decodeReal(argv[0]), decodeReal(argv[1]), decodeInt (argv[2]));
+  } else if (name == "CalculaAltura")
+  {
+  	// Este comando devuelve el valor retornado por la función calculaAltura
+	resultado = calculaAltura (decodeInt (*args.begin()));
+  } else cerr << error << "Comando no valido: " << name << endl;
+
+  // Manda un renorno al manejador de comandos del UE
+  m_execInterface.handleValueChange
+    (ack, PLEXIL::CommandHandleVariable::COMMAND_SENT_TO_SYSTEM());
+
+  // Devuelve el resultado del comando, si procede
+  if (dest != PLEXIL::ExpressionId::noId()) {
+    m_execInterface.handleValueChange (dest, resultado);
+  }
+
+  m_execInterface.notifyOfExternalEvent();
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Ejemplo de función \texttt{executeCommand()} basado en SampleAdapter.cc}
+\label{fig:excomlib}
+\end{center}
+\end{figure}
+
+Como se puede apreciar en la figura \ref{fig:excomlib}, el uso tan sólo de llamadas a las funciones de ejemplo \texttt{setValorX}, \texttt{avanzaRover} y \texttt{calculaAltura} simplifica la sintaxis del código. Estas funciones, son funciones externas al presente código, y a modo de ejemplo, se implementarán en el archivo \texttt{sample\_system.cc}.
+
+Durante el desarrollo de este documento, se ha explicado el significado y el uso de los \textit{lookups} en el código, que atienden a modificaciones externas del estado del sistema. En caso de alteración del valor de un estado, el ejecutor llama al método \texttt{lookupNow} a continuación (figura \ref{fig:lookuplib}). Este método, según se desarrolla en el ejemplo, toma el nombre del estado modificado, así como de los argumentos de este para su actualización de información. Dependiendo de la aplicación que se desee desarrollar, no es necesario la modificación del código perteneciente a \texttt{lookupNow}, sí en cambio la función \texttt{fetch}.
+
+La función \texttt{fetch}, de tipo \texttt{Any} hace una selección del estado que se desea modificar, entre los que se quieran tener disponibles, de una forma muy similar a lo visto en \texttt{executeCommand},  y se pasan los argumentos por referencia, mediante las funciones (\texttt{getX} y \texttt{setX}) creadas en el archivo \texttt{sample\_system.cc}.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+double EjemploAdapter::lookupNow (const State& state)
+{
+  // Nombre del estado que se vaya a modificar, y sus argumentos
+  LabelStr name (state.first);
+  const vector<Any>& args = state.second;
+  return fetch(name.toString(), args);
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Ejemplo de función \texttt{lookupNow()} basado en SampleAdapter.cc}
+\label{fig:lookuplib}
+\end{center}
+\end{figure}
+
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+static Any fetch (const string& state_name, 
+						const vector<Any>& args)
+{
+  debugMsg("EjemploAdapter:fetch",
+           "Llamada a Fetch de  " << state_name << ", argumentos ( " << args.size() << " ) " );
+
+  Any resultado;
+
+  if (state_name == "Estado1")
+  { 
+  	resultado = encodeReal (getEstado1(decodeReal(args[0])));
+  } ...
+   else {
+    cerr << error << " estado no valido: " << state_name << endl;
+    resultado = Unknown;
+  }
+  debugMsg("EjemploAdapter:fetch",
+           "Valor retornado por Fetch: " << 
+           PLEXIL::Expression::valueToString (resultado));
+  return resultado;
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Función \texttt{fetch()} basado en SampleAdapter.cc}
+\label{fig:fetchlib}
+\end{center}
+\end{figure}
+
+Con todo lo visto anteriormente, el archivo \texttt{sample\_system.cc} deberá contener los prototipos y desarrollos de las funciones que son accedidas desde el \texttt{executeCommand}, así como la definición de los estados y sus funciones \texttt{setX} y \texttt{getX}. Este archivo es, principalmente, el que va a llevar toda la carga de funcionalidad para procesar los datos desde los \texttt{Command nodes} de PLEXIL. Por conveniencia, se propone el uso de diferentes archivos con estas funcionalidades, para las distintas librerías que se deseen crear, a fin de agilizar y depurar con facilidad, pero no hay ninguna regla que lo impida. A continuación, se muestra un ejemplo con las diferentes partes que componen este código de ejemplo. En la figura \ref{fig:estSS} se definen los estados del sistema como variables de tipo \texttt{static}, que pueden o no ser inicializadas. En la figura \ref{fig:getsetSS}, mediante la función \texttt{defAccessors} se generan automáticamente las funciones \texttt{getX} y \texttt{setX}. Por último, la figura \ref{fig:comSS} contiene un pseudoejemplo de un prototipo de función que es llamada desde \texttt{executeCommand}, donde se deberá implementar toda la funcionalidad que se necesite para la ejecución del nodo de PLEXIL. 
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+// Estados del sistema, como variables.
+//
+static float Estado1 = 23.4;
+static int Estado2 = 7;
+static string Color = "Azul";
+static book Encendido = true;
+static pair<int, int> Coordenadas (0,0);
+\end{lstlisting}
+\end{minipage}
+\caption{Declaración de estados en \texttt{sample\_system.cc}}
+\label{fig:estSS}
+\end{center}
+\end{figure}
+
+
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+// Función para la generación de las funciones getX y setX
+// Se pasa como referencia name (nombre del estado) y el tipo de dato
+// que corresponda en cada caso
+
+#define defAccessors(name, type) \
+type get##name () \
+{ \
+  return name; \
+} \
+void set##name (const type & s) \
+{ \
+  if (s != name) { \
+    name = s; \
+    publish (#name, s); \
+  } \
+}
+
+// Llamada para la generación de los funciones que se necesiten
+defAccessors(Estado1, float)
+defAccessors(Estado2, int)
+defAccessors(Color, string)
+defAccessors(Encendido, bool)
+\end{lstlisting}
+\end{minipage}
+\caption{Funciones \texttt{getX} y \texttt{setX} en \texttt{sample\_system.cc}}
+\label{fig:getsetSS}
+\end{center}
+\end{figure}
+
+
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c++, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+void avanzaRover (static double coorX, static double coorY, static double Pasos)
+{
+  static double x, y, p;
+  if (coorX > 0) {
+    ...
+  }
+}
+\end{lstlisting}
+\end{minipage}
+\caption{Funciones Command en \texttt{sample\_system.cc}}
+\label{fig:comSS}
+\end{center}
+\end{figure}

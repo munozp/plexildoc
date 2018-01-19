@@ -1,0 +1,124 @@
+\chapter{Introducción}
+
+Este documento representa una guía básica de uso y funcionamiento del lenguaje PLEXIL (\textit{Plan Execution Interchange Language}) para modelado de planes de alto nivel enfocados a sistemas autónomos y del ejecutor de planes diseñado para él: el \textit{Universal Executive} (en adelante UE).
+
+PLEXIL fue originalmente desarrollado como un proyecto colaborativo entre investigadores de la NASA y de la Universidad Carnegie Mellon, bajo fondos del \textit{Mars Technology Program} a través del \textit{Research Institute for Advanced Computer Science} (RIACS) en la \textit{Universities Space Research Association} (USRA). El proyecto comenzó en 2006 y actualmente esta en constante evolución. Se encuentra bajo licencia BSD (\textit{Berkeley Software Distribution}) y se puede descargar el código fuente completo con ficheros de ejemplo desde la página del proyecto en SourceForge\cite{ref:plexuedesc}. También puede consultarse en SourceForge la wiki del proyecto accediendo al enlace a través de la página de descarga del mismo.
+
+PLEXIL y el UE han sido utilizados para demostración integrándolo en el \textit{rover} K10 (figura \ref{fig:k10}) para pruebas de movilidad y de interacción hombre-robot. El K10 está preparado para realizar tareas de inspección. El programa desarrollado en el \textit{Ames Research Center} le permite realizar una inspección completa de 360º a un SCOUT \textit{rover} tomando fotografías de alta resolución en una serie de puntos predeterminados\cite{ref:k10}. También ha sido probado en el \textit{Mars Drill}, un prototipo de taladro gestionado de forma autónoma. Finalmente, se ha empleado para demostrar la automatización de algunas tareas en la Estación Espacial Internacional (ISS).
+
+\begin{figure}[h]
+\begin{center}
+ \includegraphics[width=3cm]{K10}
+ \label{fig:k10}
+ \caption{Robot K10}
+\end{center}
+\end{figure}
+
+En éste primer capítulo se dará una descripción breve del lenguaje PLEXIL y el UE, así como los elementos necesarios para poder utilizarlos y la instalación de los mismos. En el segundo capítulo se abordará el lenguaje PLEXIL, y en el tercero el funcionamiento del UE.
+
+
+\section{Requisitos}
+
+Las necesidades de los programas auxiliares de PLEXIL y el UE vienen descritas en el manual de PLEXIL\cite{ref:ueman} (este manual viene incluido en la distribución de PLEXIL), habiendo sido probado correctamente en Red Hat Linux (versiones 4 y 5), MacOS X (10.4, 10.5 y 10.6) y Ubuntu\footnote{Para poder compilar \texttt{robosim} se deben tener instalados los siguientes paquetes: \texttt{glutg3, glutg3-dev, libxi-dev} y \texttt{libxmu-dev}} (desde la versión 8.04 hasta la 10.04), pero debería funcionar en la mayoría de los sistemas basados en UNIX.
+
+Para poder almacenar el código fuente y los ejecutables es necesario disponer de al menos 150MB de espacio en disco. El uso de memoria RAM no está calculado y depende de varios factores, no obstante, está diseñado con un enfoque eficiente para poder utilizarlo bajo sistemas empotrados con bajos recursos.
+
+También será necesario disponer de varios programas para poder compilar el código y generar los correspondientes ejecutables para PLEXIL, el UE y otras herramientas de utilidad incluidas en la distribución:
+\begin{itemize}
+	\item \textbf{g++}: el compilador de C++, versión 3.3.3 o superiores.\\(http://gcc.gnu.org)
+	\item \textbf{ant}: herramienta para la automatización de la compilación.\\(http://ant.apache.org/)
+	\item \textbf{Java}: tanto la máquina virtal de Java como el JDK (\textit{Java Development Kit}). Requiere la versión 1.5 o 1.6 (no se recomienda el uso de OpenJDK por carecer de un jar requerido).\\(http://www.java.com)
+	\item \textbf{Doxygen}: herramienta opcional que permite generar automáticamente la documentación del código en varios formatos.\\(http://www.stack.nl/$\sim$dimitri/doxygen)
+\end{itemize}
+
+
+\section{Instalación}
+
+Una vez descargada la distribución de plexil, habrá que realizar la compilación del código fuente. Para ello, primero habrá que descomprimir los archivos en una carpeta, en este caso usaremos \texttt{/home/usuario/plexil} como origen y después será necesario definir la variable PLEXIL\_HOME y añadir una nueva ruta al PATH de la \texttt{shell}. Será por tanto necesario modificar el archivo de inicio de la \texttt{shell} que utilicemos en nuestro sistema. Por ejemplo, para \texttt{bash} este archivo se ubicará en \texttt{/home/usuario/.bashrc}. Para incluir las rutas necesarias será preciso insertar las líneas que se indican en las figuras \ref{fig:varcsh} ó \ref{fig:varbash} en el archivo correspondiente en función del sistema usado.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+setenv PLEXIL_HOME /home/usuario/plexil
+setenv PATH $PLEXIL_HOME/bin:$PATH
+(No Mac) setenv LD_LIBRARY_PATH $PLEXIL_HOME/lib
+(sólo Mac) setenv DYLD_LIBRARY_PATH $PLEXIL_HOME/lib
+(sólo Mac) setenv DYLD_BIND_AT_LAUNCH YES
+\end{lstlisting}
+\end{minipage}
+\caption{Variables de entorno para \texttt{csh}}
+\label{fig:varcsh}
+\end{center}
+\end{figure}
+
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+export PLEXIL_HOME=/home/usuario/plexil
+export PATH=$PLEXIL_HOME/bin:$PATH
+(No Mac) export LD_LIBRARY_PATH=$PLEXIL_HOME/lib
+(sólo Mac) export DYLD_LIBRARY_PATH=$PLEXIL_HOME/lib
+(sólo Mac) export DYLD_BIND_AT_LAUNCH=YES
+\end{lstlisting}
+\end{minipage}
+\caption{Variables de entorno para \texttt{bash}}
+\label{fig:varbash}
+\end{center}
+\end{figure}
+
+Una vez definidas las variables en el archivo de configuración de la \texttt{shell} se podrán utiliar los ejecutables de PLEXIL y el UE desde cualquier directorio de forma cómoda, además de poder emplear las librerías dinámicas de la distribución en nuestros propios programas. Con esto realizado, habrá que situarse sobre el directorio de PLEXIL y ejecutar \texttt{make} para que de forma automática compile y construya todos los elementos del sistema. El archivo \texttt{Makefile} sólo ejecuta los correspondientes comandos que compilan cada elemento. Si se quiere realizar sólo la compilación de un elemento, basta con elegir la orden correspondiente. 
+
+Cada objetivo del archivo construye un elemento\footnote{Durante la compilación es posible que se den avisos por el uso de funciones obsoletas.}. \texttt{UniversalExec} construye el ejecutable del UE (capítulo \ref{cap:ue}), \texttt{luv} el visor gráfico LUV (vease la sección \ref{sec:luv}), \texttt{standard-plexil} prepara el sistema de parseado y traducción para los planes de PLEXIL (más detalles en el capítulo \ref{cap:plexil}), y el resto de líneas permiten generar herramienas auxiliares o simuladores de ejemplo incluidos en la distribución.
+
+La forma de ejecutar cada uno de los ejecutables generados se verá posteriormente en sus respectivas secciones.
+
+Una vez realizada la construcción de los elementos, se puede realizar la generación de documentación del código. Para ello, basta con ejecutar las ordenes mostradas en la figura \ref{fig:docdoxy}. Con ello obtendremos la documentación del código en \texttt{\$PLEXIL\_HOME/src/exec/doc/index.html}.
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=c, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+cd $PLEXIL_HOME/src/exec
+doxygen ue.dox
+$
+\end{lstlisting}
+\end{minipage}
+\caption{Generación de la documentación con Doxygen}
+\label{fig:docdoxy}
+\end{center}
+\end{figure}
+
+
+\subsection{Control de subversión}
+
+PLEXIL está mantenido en un sistema de control de subversiones (SVN). Mediante dicho sistema, tras la instalación inicial de PLEXIL el usuario podrá interactuar con el SVN y actualizar los archivos de la distribución a las últimas versiones. Para poder realizar las acciones que se detallan a continuación, habrá que disponer del programa SVN en la máquina local. Para obtener el programa puede dirigirse a su página oficial:
+
+\noindent \texttt{http://subversion.tigris.org/}.
+
+El script \texttt{plexil/bin/checksvn} permitirá conocer si hay alguna versión nueva de los archivos en el repositorio SVN. Si se desea actualizar u obtener la última versión disponible, basta con introducir la orden de la figura \ref{fig:svncheckout}.
+\begin{figure}[!h]
+\begin{center}
+\begin{minipage}{12cm}
+\lstset{language=bash, breaklines=true, tabsize=3}
+\lstset{commentstyle=\textit}
+\lstset{stringstyle=\ttfamily, basicstyle=\footnotesize}
+\begin{lstlisting}[frame=trbl]{}
+svn checkout https://plexil.svn.sourceforge.net/svnroot/plexil/trunk plexil
+\end{lstlisting}
+\end{minipage}
+\caption{Obtención de la última versión de PLEXIL}
+\label{fig:svncheckout}
+\end{center}
+\end{figure}
+
+Con ello obtendremos una copia actualizada (o actualizaremos la copia local) de todos los componentes de PLEXIL. La copia se albergará en una carpeta de nombre \texttt{plexil} en el directorio desde el cual ejecutemos la orden. Si desea conocer más acerca de SVN puede consultar \cite{ref:svn}.

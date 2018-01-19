@@ -1,0 +1,123 @@
+\chapter{Transiciones de los nodos en PLEXIL}\label{ap:transiciones}
+
+En este anexo se presentan la posibles transiciones entre los diferentes estados que podrán llevar a cabo los nodos en PLEXIL. Para ello, se dará una breve explicación anexa a una figura que representará las posibilidades en función del estado inicial y el tipo de nodo.
+
+En la figura \ref{fig:a1} se muestra la leyenda para las imágenes de este anexo\footnote{Todas las imagenes de este apéndice han sido obtenidas de la wiki de Plexil: \texttt{http://sourceforge.net/apps/mediawiki/plexil/index.php?title=Node\_State\_Transition\_Diagrams}}. Los rectángulos amarillos representan las posibles condiciones que pueden hacer que un nodo cambie de estado. Los rectángulos con barras oscuras a los lados indican el estado de salida de un nodo. Los rombos lilas implican una comprobación de condición. La comprobación de una condición puede darse para la lógica bivaluada (verdadero o falso), o para la trivaluada (verdadero, falso o desconocido). En las figuras se representarán con T, F y U para verdadero, falso y desconocido respectivamente (\textit{True, False and Unknown}). Para indicar las transiciones se utilizan flechas desde el estado origen al estado destino. En caso de haber múltiples transiciones posibles, un número entero representará  el orden de preferencia, siendo el menor valor el más prioritario. Finalmente, las elipses azules indican en su interior el estado en el cual se encuentra el nodo.
+
+\begin{figure}[h]
+\begin{center}
+ \includegraphics[width=12cm]{leyendastd}
+ \caption{Leyenda}
+ \label{fig:a1}
+\end{center}
+\end{figure}
+\newpage
+
+En la figura \ref{fig:a2} se representa el punto de partida para todos los nodos. Todos los nodos comienzan en estado inactivo y pueden variar a omitido o en espera en base las condiciones de ejecución de su nodo padre. 
+\begin{figure}[h]
+\begin{center}
+ \includegraphics[width=12cm]{inactivostd}
+ \caption{Transiciones desde \textquotedblleft inactivo\textquotedblright\ para todos los tipos de nodos}
+ \label{fig:a2}
+\end{center}
+\end{figure}
+\newpage
+
+En la figura \ref{fig:a3} se muestran las transiciones posibles una vez que el nodo esta preparado para poder entrar en ejecución. El nodo podrá finalizar como omitido si se dan ciertas condiciones en el padre, o, en caso de no darse estas, comprobar sus condiciones de inicio pudiendo ser apto para ejecución o finalizar en fallo por no haber satisfecho dichas condiciones.
+\begin{figure}[h]
+\begin{center}
+ \includegraphics[width=12cm]{esperastd}
+ \caption{Transiciones desde \textquotedblleft en espera\textquotedblright\ para todos los tipos de nodos}
+ \label{fig:a3} 
+\end{center}
+\end{figure}
+
+La figura \ref{fig:a4} se presenta como finaliza un nodo de tipo lista. Hay que recordar que estos nodos sólo comprobarán su condición de finalización una vez todos los nodos hijos hayan finalizado su ejecución.
+\begin{figure}[h]
+\begin{center}
+ \includegraphics[width=12cm]{ejecucionlstd}
+ \caption{Transiciones desde \textquotedblleft en ejecución\textquotedblright\ para los nodos de tipo lista}
+ \label{fig:a4}
+\end{center}
+\end{figure}
+
+La figura \ref{fig:a5} muestra las posibles transiciones desde el estado de ejecución al de finalización para los nodos de tipo comando y actualización. En estos nodos entra en juego la condición invariante que puede provocar una finalización prematura del nodo. Esta terminación abrupta implicará, en caso de no haber cumplido el objetivo del nodo, abortar la ejecución de las tareas del nodo. El estado final \textit{\textquotedblleft ITERATION\_ENDED\textquotedblright\ } implica que el nodo ha finalizado un ciclo de ejecución y que esta listo para volver a ser ejecutado si existe y se cumple la condición de repetición.
+\begin{figure}[h]
+\begin{center}
+ \includegraphics[width=12cm]{ejecucioncupstd}
+ \caption{Transiciones desde \textquotedblleft en ejecución\textquotedblright\ para los nodos de comando y actualización}
+ \label{fig:a5}
+\end{center}
+\end{figure}
+
+En la figura \ref{fig:a6} pueden verse las posibles transiciones en la ejecución de un nodo de asignación. Estos nodos varían de los anteriores en la forma de abortar la ejecución del nodo ante un fallo. En este caso asignarán el valor desconocido a la variable que tuvieran que tratar antes de finalizar la ejecución. La condición de finalización puede utilizarse para evaluar la corrección de la asignación mediante la lectura del valor de salida.
+\begin{figure}[h]
+\begin{center}
+ \includegraphics[width=12cm]{ejecucionastd}
+ \caption{Transiciones desde \textquotedblleft en ejecución\textquotedblright\ para los nodos de asignación}
+ \label{fig:a6}
+\end{center}
+\end{figure}
+
+%La figura \ref{fig:a7} indica el posible flujo para la ejecución de los nodos de llamada a función. La ejecución de estos nodos puede considerarse una mezcla entre los nodos de comando y asignación, ya que si hay una terminación abrupta del nodo debido a la condición invariante o al nodo padre, este nodo deberá establecer a desconocido el valor de la variable que retornaría la función (si la hubiera), así como abortar la ejecución de la misma.
+%\begin{figure}[h]
+%\begin{center}
+% \includegraphics[width=12cm]{ejecucionfstd}
+% \caption{Transiciones desde \textquotedblleft en ejecución\textquotedblright\ para los nodos de llamada a función}
+% \label{fig:a7}
+%\end{center}
+%\end{figure}
+
+En la figura \ref{fig:a8} se muestra el comportamiento de los nodos vacíos. Dado que el uso de estos nodos es generalmente comprobar una condición para leer su estado de salida, su comportamiento más común es comprobar su condición de finalización y establecer el valor de salida en consecuencia para que otro nodo lo utilice.
+\begin{figure}[h]
+\begin{center}
+ \includegraphics[width=12cm]{ejecucionestd}
+ \caption{Transiciones desde \textquotedblleft en ejecución\textquotedblright\ para los nodos vacios}
+ \label{fig:a8}
+\end{center}
+\end{figure}
+
+En base al estado de ejecución de los nodos hijos y del estado del salida del nodo padre, un nodo de tipo lista establecerá la causa de su fallo en su valor de salida. Dicha eventualidad puede verse en la figura \ref{fig:a9}.
+\begin{figure}[h]
+\begin{center}
+ \includegraphics[width=12cm]{fallolstd}
+ \caption{Transiciones desde \textquotedblleft fallo\textquotedblright\ para los nodos de tipo lista}
+ \label{fig:a9}
+\end{center}
+\end{figure}
+
+Al igual que en el caso anterior, los nodos de tipo comando y actualización establecerán el tipo de fallo ocurrido durante su ejecución en base a si el fallo es propio o del padre, siempre y cuando la ejecución del nodo haya sido correctamente abortada. El flujo puede verse en la figura \ref{fig:a10}.\newline
+\begin{figure}[h]
+\begin{center}
+ \includegraphics[width=12cm]{fallocupstd}
+ \caption{Transiciones desde \textquotedblleft fallo\textquotedblright\  para los nodos de comando y actualización}
+ \label{fig:a10}
+\end{center}
+\end{figure}
+
+La figura \ref{fig:a11} representa las transiciones posibles para la finalización de un nodo de tipo lista. Para que estos nodos terminen correctamente, todos sus hijos deberán haber finalizado su ejecución (independientemente de como haya sido esta) y deberá verificar su condición de finalización.
+\begin{figure}[!h]
+\begin{center}
+ \includegraphics[width=12cm]{finallstd}
+ \caption{Transiciones desde \textquotedblleft finalizando\textquotedblright\  para los nodos de tipo lista}
+ \label{fig:a11}
+\end{center}
+\end{figure} \newpage
+
+En la figura \ref{fig:a12} se muestran los posibles flujos de ejecución para todos los tipos de nodos desde el estado de \textit{\textquotedblleft ITERATION\_ENDED\textquotedblright}. En caso de que el padre haya finalizado su ejecución, el nodo finalizará también la suya, independientemente de que tenga o no condición de repetición. Si el nodo padre todavía no ha finalizado y el nodo tiene condición de repetición, si esta se cumpliese, podría volver a ejecución posteriormente, modificando su estado a \textquotedblleft en espera\textquotedblright\ o, en caso contrario, finalizar su ejecución.
+\begin{figure}[h]
+\begin{center}
+ \includegraphics[width=12cm]{iteracionlstd}
+ \caption{Transiciones desde \textquotedblleft \textit{ITERATION\_ENDED}\textquotedblright\  para todos los tipos de nodos}
+ \label{fig:a12}
+\end{center}
+\end{figure}
+
+La figura \ref{fig:a13} muestra como uno nodo finaliza completamente su ejecución. Una vez haya finalizado, esperará a que su padre también lo haga, en cuyo momento el nodo borrará todos sus datos internos y pasará al estado \textquotedblleft inactivo \textquotedblright .
+\begin{figure}[h]
+\begin{center}
+ \includegraphics[width=12cm]{finalstd}
+ \caption{Transiciones desde \textquotedblleft finalizado\textquotedblright\  para todos los tipos de nodos}
+ \label{fig:a13}
+\end{center}
+\end{figure}
